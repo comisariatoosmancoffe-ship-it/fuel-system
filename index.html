@@ -116,8 +116,7 @@
 
     <script>
         // --- CONFIGURACIÓN DE NUBE (VINCULADA) ---
-        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxoftDpFVN5TIBwViMsbhMrNfPci5WEVhomWcj9_2sxbo7y_nXNQrGPrnDa8jhA0oQ7/exec";
-
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbxoftDpFVN5TIBwViMsbhMrNfPci5WEVhomWcj9_2sxbo7y_nXNQrGPrnDa8jhA0oQ7/exec';
         let app = JSON.parse(localStorage.getItem('fuelDB')) || {
             clientes: [], vehiculos: [], ventas: [], compras: [],
             stock: { "Súper": 0, "Regular": 0, "Diésel": 0 },
@@ -208,4 +207,5 @@
         document.getElementById('v_fecha').valueAsDate = new Date(); document.getElementById('c_fecha').valueAsDate = new Date(); actualizarUI(); renderVentas(); renderCompras(); actualizarSelects();
     </script>
 </body>
+
 </html>
