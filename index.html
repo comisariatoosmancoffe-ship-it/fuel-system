@@ -253,40 +253,46 @@ async function save(datosNube = null) {
         function restaurarBackup(ev) { const reader = new FileReader(); reader.onload = e => { app = JSON.parse(e.target.result); save(); location.reload(); }; reader.readAsText(ev.target.files[0]); }
         function borrarTodo() { if (confirm("¿BORRAR TODO? Se perderán clientes y registros locales.")) { localStorage.clear(); location.reload(); } }
 
-        window.onload = async function () {
-    console.log("🔄 Conectando con la base de datos central...");
+   window.onload = async function() {
+    // 1. Configurar fechas de hoy (lo que ya tenías)
+    document.getElementById('v_fecha').valueAsDate = new Date(); 
+    document.getElementById('c_fecha').valueAsDate = new Date();
 
-    // 1. Primero cargamos lo que haya en la memoria del celular
-    actualizarUI();
-    renderVentas();
-    renderCompras();
+    // 2. Cargar lo que esté guardado en el teléfono actualmente
+    actualizarUI(); 
+    renderVentas(); 
+    renderCompras(); 
     actualizarSelects();
 
-    // 2. Intentamos traer datos frescos de Google Sheets
+    console.log("🔄 Sincronizando con Google Sheets...");
+
+    // 3. ¡EL TRUCO MÁGICO! Ir a traer los Clientes y Placas del Excel
     try {
-        // Llamamos a la acción "readDB" que creamos en el Script de Google
+        // Pedimos los datos a tu URL de Google
         const respuesta = await fetch(WEB_APP_URL + "?action=readDB");
         const dataNube = await respuesta.json();
 
         if (dataNube) {
-            // Reemplazamos las listas locales con las de la nube (Excel)
+            // Si el Excel tiene clientes, los pasamos a la App
             if (dataNube.clientes && dataNube.clientes.length > 0) {
                 app.clientes = dataNube.clientes;
             }
+            // Si el Excel tiene vehículos (con su área), los pasamos a la App
             if (dataNube.vehiculos && dataNube.vehiculos.length > 0) {
                 app.vehiculos = dataNube.vehiculos;
             }
 
-            // Guardamos esto en el celular para que funcione aunque no haya internet después
+            // Guardamos todo en la memoria del dispositivo
             localStorage.setItem('fuelDB', JSON.stringify(app));
-
-            // Refrescamos la pantalla con los datos nuevos
+            
+            // Refrescamos los menús desplegables para que aparezca lo nuevo
             actualizarSelects();
-            console.log("✅ Datos sincronizados desde la nube");
+            console.log("✅ Sincronización completa: Clientes y Vehículos cargados.");
         }
     } catch (e) {
-        console.warn("⚠️ Modo Offline: No se pudo conectar con la nube, usando datos locales.");
+        console.warn("⚠️ Modo Offline: No se pudo conectar a la nube. Usando datos guardados en el equipo.");
     }
+    console.log("Sincronizando con Excel...");
     try {
         const res = await fetch(WEB_APP_URL + "?action=readDB");
         const data = await res.json();
@@ -297,8 +303,7 @@ async function save(datosNube = null) {
         actualizarSelects();
         actualizarUI();
     } catch (e) { console.log("Modo offline"); }
-};    
+};
     </script>
 </body>
-
 </html>
