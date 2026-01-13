@@ -47,7 +47,8 @@
                 </div>
                 <div class="grid grid-cols-1 gap-4">
                     <div class="grid grid-cols-2 gap-2">
-                        <select id="v_cliente" onchange="filtrarVehiculos()" class="p-3 border rounded-xl bg-yellow-50 font-bold"></select>
+                      <select id="v_cliente" onchange="filtrarPlacas()" required>
+                      <option value="">-- Cliente --</option></select>
                         <select id="v_placa" onchange="autoCompletarArea()" class="p-3 border rounded-xl bg-blue-50 font-bold"></select>
                     </div>
                     <input type="text" id="v_area" placeholder="Área" class="p-3 border rounded-xl bg-gray-50 italic">
@@ -199,7 +200,61 @@ async function save(datosNube = null) {
         function editarVenta(i) { const v = app.ventas[i]; document.getElementById('v_fecha').value = v.fecha; document.getElementById('v_orden').value = v.orden; document.getElementById('v_cliente').value = v.clienteId; filtrarVehiculos(); document.getElementById('v_placa').value = v.placa; document.getElementById('v_area').value = v.area; document.getElementById('v_prod').value = (v.producto === "--- ANULADA ---") ? "ANULADA" : v.producto; document.getElementById('v_cant').value = v.cantidad; document.getElementById('v_precio').value = v.precio; document.getElementById('v_desc').value = v.descuento; document.getElementById('v_total').innerText = v.total; document.getElementById('v_edit_index').value = i; document.getElementById('btn-registrar').innerText = "Actualizar"; verTab('ventas'); }
         function eliminarVenta(i) { if (confirm("¿Eliminar registro?")) { const v = app.ventas[i]; if (v.producto !== "--- ANULADA ---") app.stock[v.producto] += v.cantidad; app.ventas.splice(i, 1); save(); } }
         function cancelarVenta() { document.getElementById('v_edit_index').value = "-1"; document.getElementById('btn-registrar').innerText = "Guardar"; document.getElementById('v_cant').value = ""; document.getElementById('v_total').innerText = "0.00"; }
-        function renderVentas() { document.getElementById('lista_ventas').innerHTML = app.ventas.map((v, i) => `<tr class="border-b ${v.producto === '--- ANULADA ---' ? 'bg-red-50 text-red-300' : ''}"><td class="p-2">${v.fecha}<br><small>#${v.orden}</small></td><td class="p-2 font-bold">${v.placa}</td><td class="p-2">${v.producto}<br>${v.cantidad}Gls</td><td class="p-2 text-right font-black text-blue-900">$${v.total.toFixed(2)}</td><td class="p-2 text-center"><button onclick="editarVenta(${i})" class="text-blue-500 mr-2">✎</button><button onclick="eliminarVenta(${i})" class="text-red-500">🗑</button></td></tr>`).join(''); }
+        // Función para mostrar la lista de VENTAS en el móvil
+function renderVentas() {
+    const contenedor = document.getElementById('lista_ventas'); // Asegúrate de que este ID exista en tu HTML
+    if (!contenedor) return;
+
+    if (app.ventas.length === 0) {
+        contenedor.innerHTML = "<p>No hay ventas registradas.</p>";
+        return;
+    }
+
+    // Ordenar por fecha (la más reciente primero)
+    const ventasOrdenadas = [...app.ventas].reverse();
+
+    let html = '<table class="tabla-movil">';
+    html += '<thead><tr><th>Fecha</th><th>Cliente</th><th>Cant.</th><th>Total</th></tr></thead><tbody>';
+
+    ventasOrdenadas.forEach(v => {
+        html += `<tr>
+            <td>${v.fecha || ''}</td>
+            <td>${v.cliente || ''}</td>
+            <td>${v.cantidad || 0}</td>
+            <td>$${parseFloat(v.total || 0).toFixed(2)}</td>
+        </tr>`;
+    });
+
+    html += '</tbody></table>';
+    contenedor.innerHTML = html;
+}
+
+// Función para mostrar la lista de COMPRAS en el móvil
+function renderCompras() {
+    const contenedor = document.getElementById('lista_compras');
+    if (!contenedor) return;
+
+    if (app.compras.length === 0) {
+        contenedor.innerHTML = "<p>No hay compras registradas.</p>";
+        return;
+    }
+
+    const comprasOrdenadas = [...app.compras].reverse();
+
+    let html = '<table class="tabla-movil">';
+    html += '<thead><tr><th>Fecha</th><th>Producto</th><th>Cant.</th></tr></thead><tbody>';
+
+    comprasOrdenadas.forEach(c => {
+        html += `<tr>
+            <td>${c.fecha || ''}</td>
+            <td>${c.producto || ''}</td>
+            <td>${c.cantidad || 0}</td>
+        </tr>`;
+    });
+
+    html += '</tbody></table>';
+    contenedor.innerHTML = html;
+}
 
         // --- EXPORTACIÓN Y BI ---
         function exportarVentasExcel() { const ws = XLSX.utils.json_to_sheet(app.ventas); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Ventas"); XLSX.writeFile(wb, "Historial_Ventas.xlsx"); }
@@ -273,26 +328,35 @@ async function save(datosNube = null) {
 
      selectPlaca.innerHTML = html;
  }
-        function autoCompletarArea() { const v = app.vehiculos.find(v => v.placa === document.getElementById('v_placa').value); if (v) document.getElementById('v_area').value = v.area || ""; }
-       function actualizarUI() {
-    // 1. Calcular Compras Totales
-    const totalCompras = app.compras.reduce((sum, c) => sum + parseFloat(c.cantidad || 0), 0);
+      function actualizarArea() {
+    const placaSeleccionada = document.getElementById('v_placa').value;
+    const inputArea = document.getElementById('v_area');
     
-    // 2. Calcular Ventas Totales
-    const totalVentas = app.ventas.reduce((sum, v) => sum + parseFloat(v.cantidad || 0), 0);
+    const vehiculo = app.vehiculos.find(v => (v.placa || v.PLACA) === placaSeleccionada);
     
-    // 3. Stock Real = Compras - Ventas
-    const stockActual = totalCompras - totalVentas;
-
-    // Actualizar los cuadritos de la pantalla principal
-    // Asegúrate de que estos IDs coincidan con los de tu HTML
-    if(document.getElementById('res_stock')) {
-        document.getElementById('res_stock').innerText = stockActual.toFixed(2);
-    }
-    if(document.getElementById('res_ventas')) {
-        document.getElementById('res_ventas').innerText = totalVentas.toFixed(2);
+    if (vehiculo && inputArea) {
+        inputArea.value = vehiculo.area || vehiculo.AREA || "";
     }
 }
+       function actualizarUI() {
+     // Calculamos el stock por cada producto
+     ["Súper", "Regular", "Diésel"].forEach(prod => {
+         const compras = app.compras
+             .filter(c => (c.producto || c.PRODUCTO) === prod)
+             .reduce((sum, c) => sum + parseFloat(c.cantidad || 0), 0);
+
+         const ventas = app.ventas
+             .filter(v => (v.producto || v.PRODUCTO) === prod)
+             .reduce((sum, v) => sum + parseFloat(v.cantidad || 0), 0);
+
+         const actual = compras - ventas;
+
+         // Buscamos el ID correspondiente (ej: stk_super)
+         const idElemento = "stk_" + prod.toLowerCase().replace("ú", "u");
+         const el = document.getElementById(idElemento);
+         if (el) el.innerText = actual.toFixed(1);
+     });
+ }
         function descargarBackup() { const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(app)); const dl = document.createElement('a'); dl.setAttribute("href", dataStr); dl.setAttribute("download", "BACKUP_FUEL.json"); dl.click(); }
         function restaurarBackup(ev) { const reader = new FileReader(); reader.onload = e => { app = JSON.parse(e.target.result); save(); location.reload(); }; reader.readAsText(ev.target.files[0]); }
         function borrarTodo() { if (confirm("¿BORRAR TODO? Se perderán clientes y registros locales.")) { localStorage.clear(); location.reload(); } }
@@ -346,6 +410,7 @@ async function save(datosNube = null) {
     </script>
 </body>
 </html>
+
 
 
 
