@@ -578,83 +578,58 @@ function actualizarArea() {
     }
 }
 
-      // function actualizarUI() {
-   // const productos = ["Súper", "Regular", "Diésel"];
+     function actualizarUI() {
+    // Definimos los nombres tal cual quieres que se busquen
+    const productos = ["Súper", "Regular", "Diésel"];
     
-  //  productos.forEach(prod => {
-        // Sumar todas las compras de este producto
-        //const totalCompras = app.compras
-           // .filter(i => (i.producto || i.PRODUCTO || "").toLowerCase() === prod.toLowerCase())
-           // .reduce((s, i) => s + parseFloat(i.cantidad || i.CANTIDAD || 0), 0);
+    productos.forEach(prod => {
+        // Creamos una versión "limpia" para comparar (sin tildes y en minúscula)
+        const prodLimpio = prod.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+        // Sumar COMPRAS
+        const c = app.compras.reduce((s, i) => {
+            const pCompra = (i.producto || i.PRODUCTO || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            return pCompra === prodLimpio ? s + parseFloat(i.cantidad || i.CANTIDAD || 0) : s;
+        }, 0);
             
-        // Sumar todas las ventas de este producto
-       // const totalVentas = app.ventas
-           // .filter(i => (i.producto || i.PRODUCTO || "").toLowerCase() === prod.toLowerCase())
-           // .reduce((s, i) => s + parseFloat(i.cantidad || i.CANTIDAD || 0), 0);
+        // Sumar VENTAS
+        const v = app.ventas.reduce((s, i) => {
+            const pVenta = (i.producto || i.PRODUCTO || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            return pVenta === prodLimpio ? s + parseFloat(i.cantidad || i.CANTIDAD || 0) : s;
+        }, 0);
         
-        // Calcular stock
-       // const stockActual = totalCompras - totalVentas;
+        // Identificar el ID del cuadrito en el HTML (stk_super, stk_regular, stk_diesel)
+        const idLabel = "stk_" + prodLimpio;
+        const el = document.getElementById(idLabel);
         
-        // Mostrar en los cuadritos de arriba
-       // const idLabel = "stk_" + prod.toLowerCase().replace("ú", "u");
-        //const elemento = document.getElementById(idLabel);
-        //if (elemento) {
-           // elemento.innerText = stockActual.toFixed(1);
-            // Opcional: poner en rojo si hay poco stock
-           // elemento.style.color = stockActual < 100 ? "red" : "black";
-       // }
-   // });
-//}
+        if (el) {
+            const stockFinal = c - v;
+            el.innerText = stockFinal.toFixed(1);
+            // Color de alerta si el stock es bajo (menos de 100 galones)
+            el.style.color = stockFinal < 100 ? "#ef4444" : "#0f172a"; 
+        }
+    });
+}
 
- function actualizarUI() {
-     const productos = ["Súper", "Regular", "Diésel"];
+ //function actualizarUI() {
+     //const productos = ["Súper", "Regular", "Diésel"];
 
-     productos.forEach(prod => {
+     //productos.forEach(prod => {
          // Sumar compras (buscando cantidad o CANTIDAD)
-         const c = app.compras
-             .filter(i => (i.producto || i.PRODUCTO || "").toLowerCase() === prod.toLowerCase())
-             .reduce((s, i) => s + parseFloat(i.cantidad || i.CANTIDAD || 0), 0);
+        // const c = app.compras
+             //.filter(i => (i.producto || i.PRODUCTO || "").toLowerCase() === prod.toLowerCase())
+             //.reduce((s, i) => s + parseFloat(i.cantidad || i.CANTIDAD || 0), 0);
 
          // Sumar ventas (buscando cantidad o CANTIDAD)
-         const v = app.ventas
-             .filter(i => (i.producto || i.PRODUCTO || "").toLowerCase() === prod.toLowerCase())
-             .reduce((s, i) => s + parseFloat(i.cantidad || i.CANTIDAD || 0), 0);
+         //const v = app.ventas
+            // .filter(i => (i.producto || i.PRODUCTO || "").toLowerCase() === prod.toLowerCase())
+             //.reduce((s, i) => s + parseFloat(i.cantidad || i.CANTIDAD || 0), 0);
 
-         const id = "stk_" + prod.toLowerCase().replace("ú", "u");
-         const el = document.getElementById(id);
-         if (el) el.innerText = (c - v).toFixed(1);
-     });
- }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        
+         //const id = "stk_" + prod.toLowerCase().replace("ú", "u");
+        // const el = document.getElementById(id);
+        // if (el) el.innerText = (c - v).toFixed(1);
+     //});
+// }   
         function descargarBackup() { const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(app)); const dl = document.createElement('a'); dl.setAttribute("href", dataStr); dl.setAttribute("download", "BACKUP_FUEL.json"); dl.click(); }
         function restaurarBackup(ev) { const reader = new FileReader(); reader.onload = e => { app = JSON.parse(e.target.result); save(); location.reload(); }; reader.readAsText(ev.target.files[0]); }
         function borrarTodo() { if (confirm("¿BORRAR TODO?")) { localStorage.clear(); location.reload(); } }
@@ -692,6 +667,7 @@ function actualizarArea() {
     </script>
 </body>
 </html>
+
 
 
 
