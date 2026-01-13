@@ -303,32 +303,43 @@ function renderCompras() {
     const lista = document.getElementById('lista_compras');
     if(!lista) return;
     
+    if (!app.compras || app.compras.length === 0) {
+        lista.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-gray-400 italic">No hay compras registradas</td></tr>';
+        return;
+    }
+
     lista.innerHTML = app.compras.map((c, i) => {
-        const fecha = c.fecha || c.FECHA || '';
-        const factura = c.factura || c.FACTURA || '';
-        const producto = c.producto || c.PRODUCTO || '';
+        // Soporte multinombre para cada columna (PC y Nube)
+        const fecha = c.fecha || c.FECHA || '---';
+        const factura = c.factura || c.FACTURA || 'S/N';
+        const producto = c.producto || c.PRODUCTO || '---';
         const cantidad = c.cantidad || c.CANTIDAD || 0;
 
-        // CORRECCIÓN AQUÍ: Forzar que el costo total sea número
-        let totalVal = c.costoTotal || c.COSTOTOTAL || 0;
-        if (typeof totalVal === "string") totalVal = totalVal.replace(/[^0-9.]/g, '');
-        const totalNum = parseFloat(totalVal) || 0;
+        // Buscamos el total en todas sus posibles variantes de nombre
+        let rawTotal = c.costoTotal || c.COSTOTOTAL || c.total || c.TOTAL || 0;
+        
+        // Limpiamos el valor por si viene con símbolos de moneda o comas
+        if (typeof rawTotal === "string") {
+            rawTotal = rawTotal.replace(/[^0-9.]/g, '');
+        }
+        const totalNum = parseFloat(rawTotal) || 0;
 
         return `
-            <tr class="border-b">
+            <tr class="border-b hover:bg-gray-50">
                 <td class="p-2">${fecha}</td>
-                <td class="p-2 text-[9px]">${factura}</td>
-                <td class="p-2 font-bold">${producto}</td>
-                <td class="p-2">${cantidad}</td>
-                <td class="p-2 text-right font-bold">$${totalNum.toFixed(2)}</td>
+                <td class="p-2 text-[9px] font-mono">${factura}</td>
+                <td class="p-2 font-bold text-emerald-700">${producto}</td>
+                <td class="p-2 font-semibold">${cantidad} <small>Gls</small></td>
+                <td class="p-2 text-right font-black text-slate-900">$${totalNum.toFixed(2)}</td>
                 <td class="p-2 text-center">
-                    <button onclick="editarCompra(${i})" class="text-blue-500 mr-2">✎</button>
-                    <button onclick="eliminarCompra(${i})" class="text-red-500">🗑</button>
+                    <div class="flex justify-center gap-2">
+                        <button onclick="editarCompra(${i})" class="text-blue-500 bg-blue-50 p-1 rounded">✎</button>
+                        <button onclick="eliminarCompra(${i})" class="text-red-500 bg-red-50 p-1 rounded">🗑</button>
+                    </div>
                 </td>
             </tr>`;
     }).join(''); 
 }
-
         function editarCompra(i) { 
             const c = app.compras[i]; 
             document.getElementById('c_fecha').value = c.fecha; 
@@ -658,6 +669,7 @@ function actualizarArea() {
     </script>
 </body>
 </html>
+
 
 
 
