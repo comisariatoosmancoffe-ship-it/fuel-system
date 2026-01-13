@@ -174,26 +174,82 @@
         };
         let myChart = null;
 
-        // Función para guardar datos localmente y enviar a la nube
-        async function save(datosNube = null) {
-            localStorage.setItem('fuelDB', JSON.stringify(app));
-            actualizarUI();
-            renderVentas();
-            renderCompras();
+       // --- FUNCIÓN DE GUARDADO ULTRA-RESISTENTE PARA MÓVIL ---
+async function save(datosNube = null) {
+    // 1. Guardar localmente primero (siempre funciona)
+    localStorage.setItem('fuelDB', JSON.stringify(app));
+    
+    // Actualizar la vista de inmediato
+    actualizarUI();
+    renderVentas();
+    renderCompras();
 
-            if (datosNube) {
-                try {
-                    const datosLimpios = {};
-                    for (let key in datosNube) {
-                        datosLimpios[key] = datosNube[key] === undefined || datosNube[key] === null ? "" : datosNube[key];
-                    }
-                    const queryParams = new URLSearchParams(datosLimpios).toString();
-                    const urlFinal = WEB_APP_URL + (WEB_APP_URL.includes('?') ? '&' : '?') + queryParams;
-                    const ping = new Image();
-                    ping.src = urlFinal;
-                } catch (e) { console.error("❌ Error de nube:", e); }
+    // 2. Si hay datos para la nube, usar un método que el móvil no bloquee
+    if (datosNube) {
+        try {
+            // Limpiamos los datos para que no lleven símbolos raros
+            const params = new URLSearchParams();
+            for (let key in datosNube) {
+                params.append(key, datosNube[key] === undefined ? "" : datosNube[key]);
             }
+
+            // Usamos 'fetch' con modo 'no-cors' para que el móvil no lo bloquee por seguridad
+            fetch(WEB_APP_URL + "?" + params.toString(), {
+                method: 'GET',
+                mode: 'no-cors',
+                cache: 'no-cache'
+            }).then(() => {
+                console.log("✅ Enviado a la nube exitosamente");
+            }).catch(err => {
+                console.error("❌ Error de envío, pero guardado en móvil local");
+            });
+
+        } catch (e) { 
+            console.error("Error crítico en envío:", e); 
         }
+    }
+}
+
+// --- VINCULACIÓN SIMPLIFICADA (PARA QUE APAREZCA LA PLACA SÍ O SÍ) ---
+function filtrarPlacas() {
+    const selectorCliente = document.getElementById('v_cliente');
+    const clienteID = selectorCliente.value;
+    
+    // Si no hay cliente, limpiar placas y salir
+    if (!clienteID) {
+        document.getElementById('v_placa').innerHTML = '<option value="">-- Placa --</option>';
+        return;
+    }
+
+    // Buscamos los vehículos (usando == para que compare número con texto sin problemas)
+    const filtrados = app.vehiculos.filter(v => {
+        let v_cid = v.cid || v.CID || "";
+        return String(v_cid).trim() == String(clienteID).trim();
+    });
+
+    let html = '<option value="">-- Placa (' + filtrados.length + ') --</option>';
+    filtrados.forEach(v => {
+        let p = (v.placa || v.PLACA || "S/P").toUpperCase();
+        html += `<option value="${p}">${p}</option>`;
+    });
+
+    document.getElementById('v_placa').innerHTML = html;
+}
+
+// --- ACTUALIZAR ÁREA (CORREGIDO PARA MÓVIL) ---
+function actualizarArea() {
+    const placaSeleccionada = document.getElementById('v_placa').value;
+    if (!placaSeleccionada) return;
+
+    const veh = app.vehiculos.find(v => {
+        let p = v.placa || v.PLACA || "";
+        return String(p).trim().toUpperCase() === String(placaSeleccionada).trim().toUpperCase();
+    });
+
+    if (veh) {
+        document.getElementById('v_area').value = veh.area || veh.AREA || "";
+    }
+}
 
         function verTab(t) { 
             document.querySelectorAll('section').forEach(s => s.classList.add('hidden')); 
@@ -501,6 +557,7 @@ function actualizarArea() {
     </script>
 </body>
 </html>
+
 
 
 
