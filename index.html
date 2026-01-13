@@ -125,21 +125,35 @@
         };
         let myChart = null;
 
-  async function save(datosNube = null) {
+async function save(datosNube = null) {
+    // 1. Guardar siempre en la memoria del navegador (Local)
     localStorage.setItem('fuelDB', JSON.stringify(app));
-    actualizarUI(); renderVentas(); renderCompras();
+    actualizarUI(); 
+    renderVentas(); 
+    renderCompras();
 
-    // Envío a Google Sheets
+    // 2. Si hay datos nuevos, enviarlos a Google Sheets
     if (datosNube) {
         try {
-            await fetch(WEB_APP_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                body: JSON.stringify(datosNube)
-            });
-            console.log("☁️ Nube sincronizada correctamente");
+            // Limpiamos los datos para que no lleven errores
+            const datosLimpios = {};
+            for (let key in datosNube) {
+                datosLimpios[key] = datosNube[key] === undefined || datosNube[key] === null ? "" : datosNube[key];
+            }
+
+            // Creamos el enlace con los datos
+            const queryParams = new URLSearchParams(datosLimpios).toString();
+            const urlFinal = WEB_APP_URL + (WEB_APP_URL.includes('?') ? '&' : '?') + queryParams;
+
+            // TRUCO FINAL: Enviamos los datos usando un objeto de imagen
+            // Esto funciona en PC y Celular sin importar las restricciones del navegador
+            const ping = new Image();
+            ping.src = urlFinal;
+            
+            console.log("🚀 Enviando a la nube...");
+            
         } catch (e) {
-            console.error("❌ Error de red con la nube", e);
+            console.error("❌ Error de conexión:", e);
         }
     }
 }
@@ -210,6 +224,7 @@
 </body>
 
 </html>
+
 
 
 
