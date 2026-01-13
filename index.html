@@ -299,10 +299,10 @@ function actualizarArea() {
     renderCompras(); // Forzar dibujo de la lista
 }
 
-function renderCompras() { 
+function renderCompras() {
     const lista = document.getElementById('lista_compras');
-    if(!lista) return;
-    
+    if (!lista) return;
+
     lista.innerHTML = app.compras.map((c, i) => {
         // Tolerancia a mayúsculas/minúsculas de la base de datos
         const fecha = c.fecha || c.FECHA || '';
@@ -312,18 +312,18 @@ function renderCompras() {
         const total = c.costoTotal || c.COSTOTOTAL || 0;
 
         return `
-            <tr class="border-b">
-                <td class="p-2">${fecha}</td>
-                <td class="p-2 text-[9px]">${factura}</td>
-                <td class="p-2 font-bold">${producto}</td>
-                <td class="p-2">${cantidad}</td>
-                <td class="p-2 text-right font-bold">$${parseFloat(total).toFixed(2)}</td>
-                <td class="p-2 text-center">
-                    <button onclick="editarCompra(${i})" class="text-blue-500 mr-2">✎</button>
-                    <button onclick="eliminarCompra(${i})" class="text-red-500">🗑</button>
-                </td>
-            </tr>`;
-    }).join(''); 
+    <tr class="border-b">
+        <td class="p-2">${fecha}</td>
+        <td class="p-2 text-[9px]">${factura}</td>
+        <td class="p-2 font-bold">${producto}</td>
+        <td class="p-2">${cantidad}</td>
+        <td class="p-2 text-right font-bold">$${parseFloat(total).toFixed(2)}</td>
+        <td class="p-2 text-center">
+            <button onclick="editarCompra(${i})" class="text-blue-500 mr-2">✎</button>
+            <button onclick="eliminarCompra(${i})" class="text-red-500">🗑</button>
+        </td>
+    </tr>`;
+    }).join('');
 }
 
         function editarCompra(i) { 
@@ -345,21 +345,6 @@ function renderCompras() {
             document.getElementById('c_edit_index').value = "-1"; 
             document.getElementById('btn-comprar').innerText = "Guardar Compra";
             ["c_cant", "c_costo_total", "c_factura", "c_precio_venta"].forEach(id => document.getElementById(id).value = ""); 
-        }
-
-        function renderCompras() { 
-            document.getElementById('lista_compras').innerHTML = app.compras.map((c, i) => `
-                <tr class="border-b">
-                    <td class="p-2">${c.fecha || ''}</td>
-                    <td class="p-2 text-[9px]">${c.factura || ''}</td>
-                    <td class="p-2 font-bold">${c.producto || ''}</td>
-                    <td class="p-2">${c.cantidad || 0}</td>
-                    <td class="p-2 text-right font-bold">$${parseFloat(c.costoTotal || 0).toFixed(2)}</td>
-                    <td class="p-2 text-center">
-                        <button onclick="editarCompra(${i})" class="text-blue-500 mr-2">✎</button>
-                        <button onclick="eliminarCompra(${i})" class="text-red-500">🗑</button>
-                    </td>
-                </tr>`).join(''); 
         }
 
         // --- VENTAS ---
@@ -667,6 +652,7 @@ function actualizarArea() {
     </script>
 </body>
 </html>
+
 
 
 
