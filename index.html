@@ -174,6 +174,7 @@
         };
         let myChart = null;
 
+        // Función para guardar datos localmente y enviar a la nube
         async function save(datosNube = null) {
             localStorage.setItem('fuelDB', JSON.stringify(app));
             actualizarUI();
@@ -190,8 +191,7 @@
                     const urlFinal = WEB_APP_URL + (WEB_APP_URL.includes('?') ? '&' : '?') + queryParams;
                     const ping = new Image();
                     ping.src = urlFinal;
-                    console.log("🚀 Enviando a la nube...");
-                } catch (e) { console.error("❌ Error de conexión:", e); }
+                } catch (e) { console.error("❌ Error de nube:", e); }
             }
         }
 
@@ -248,11 +248,11 @@
         function renderCompras() { 
             document.getElementById('lista_compras').innerHTML = app.compras.map((c, i) => `
                 <tr class="border-b">
-                    <td class="p-2">${c.fecha}</td>
-                    <td class="p-2 text-[9px]">${c.factura}</td>
-                    <td class="p-2 font-bold">${c.producto}</td>
-                    <td class="p-2">${c.cantidad}</td>
-                    <td class="p-2 text-right font-bold">$${parseFloat(c.costoTotal).toFixed(2)}</td>
+                    <td class="p-2">${c.fecha || ''}</td>
+                    <td class="p-2 text-[9px]">${c.factura || ''}</td>
+                    <td class="p-2 font-bold">${c.producto || ''}</td>
+                    <td class="p-2">${c.cantidad || 0}</td>
+                    <td class="p-2 text-right font-bold">$${parseFloat(c.costoTotal || 0).toFixed(2)}</td>
                     <td class="p-2 text-center">
                         <button onclick="editarCompra(${i})" class="text-blue-500 mr-2">✎</button>
                         <button onclick="eliminarCompra(${i})" class="text-red-500">🗑</button>
@@ -281,13 +281,15 @@
             const placa = document.getElementById('v_placa').value;
             const idx = parseInt(document.getElementById('v_edit_index').value);
             
-            if (!prod || !placa || !cid) return alert("Faltan datos");
+            if (!prod || !placa || !cid) return alert("Faltan datos obligatorios");
+            
+            const clientObj = app.clientes.find(c => String(c.id || c.ID) === String(cid));
             
             const ven = { 
                 tipo: "VENTA", 
                 fecha: document.getElementById('v_fecha').value, 
                 orden: document.getElementById('v_orden').value, 
-                cliente: app.clientes.find(c => (c.id || c.ID) == cid).nombre || app.clientes.find(c => (c.id || c.ID) == cid).NOMBRE, 
+                cliente: clientObj.nombre || clientObj.NOMBRE, 
                 placa: placa, 
                 area: document.getElementById('v_area').value, 
                 producto: (prod === "ANULADA" || cant === 0) ? "--- ANULADA ---" : prod, 
@@ -336,14 +338,12 @@
         }
 
         function renderVentas() {
-            const contenedor = document.getElementById('lista_ventas');
-            if (!contenedor) return;
-            contenedor.innerHTML = app.ventas.map((v, i) => `
+            document.getElementById('lista_ventas').innerHTML = app.ventas.map((v, i) => `
                 <tr class="border-b">
-                    <td class="p-2">${v.fecha}<br><span class="text-blue-600 font-bold">${v.orden}</span></td>
-                    <td class="p-2 font-bold">${v.placa}</td>
-                    <td class="p-2">${v.producto}<br>${v.cantidad} Gls</td>
-                    <td class="p-2 text-right font-bold">$${parseFloat(v.total).toFixed(2)}</td>
+                    <td class="p-2">${v.fecha || ''}<br><span class="text-blue-600 font-bold">${v.orden || ''}</span></td>
+                    <td class="p-2 font-bold">${v.placa || ''}</td>
+                    <td class="p-2">${v.producto || ''}<br>${v.cantidad || 0} Gls</td>
+                    <td class="p-2 text-right font-bold">$${parseFloat(v.total || 0).toFixed(2)}</td>
                     <td class="p-2 text-center">
                         <button onclick="editarVenta(${i})" class="text-blue-500 mr-1">✎</button>
                         <button onclick="eliminarVenta(${i})" class="text-red-500">🗑</button>
@@ -351,7 +351,7 @@
                 </tr>`).join('');
         }
 
-        // --- REPORTES Y EXCEL ---
+        // --- REPORTES ---
         function exportarVentasExcel() { const ws = XLSX.utils.json_to_sheet(app.ventas); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Ventas"); XLSX.writeFile(wb, "Historial_Ventas.xlsx"); }
         function exportarComprasExcel() { const ws = XLSX.utils.json_to_sheet(app.compras); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Compras"); XLSX.writeFile(wb, "Historial_Compras.xlsx"); }
         function exportarBIExcel(t) { const data = []; document.querySelectorAll(`#res_por_${t} tr`).forEach(tr => { const td = tr.querySelectorAll("td"); data.push({ [t.toUpperCase()]: td[0].innerText, GLS: td[1].innerText, TOTAL: td[2].innerText }); }); const ws = XLSX.utils.json_to_sheet(data); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, t); XLSX.writeFile(wb, `Reporte_${t}.xlsx`); }
@@ -362,17 +362,17 @@
             if (d) f = f.filter(v => v.fecha >= d); 
             if (h) f = f.filter(v => v.fecha <= h); 
             
-            const agP = {}; f.forEach(v => { if (!agP[v.placa]) agP[v.placa] = { g: 0, t: 0 }; agP[v.placa].g += parseFloat(v.cantidad); agP[v.placa].t += parseFloat(v.total); }); 
+            const agP = {}; f.forEach(v => { if (!agP[v.placa]) agP[v.placa] = { g: 0, t: 0 }; agP[v.placa].g += parseFloat(v.cantidad || 0); agP[v.placa].t += parseFloat(v.total || 0); }); 
             document.getElementById('res_por_placa').innerHTML = Object.entries(agP).map(([p, d]) => `<tr><td class="p-1">${p}</td><td class="p-1 text-center font-bold">${d.g.toFixed(1)}</td><td class="p-1 text-right font-bold">$${d.t.toFixed(2)}</td></tr>`).join(''); 
             
-            const agA = {}; f.forEach(v => { const a = v.area || "S/A"; if (!agA[a]) agA[a] = { g: 0, t: 0 }; agA[a].g += parseFloat(v.cantidad); agA[a].t += parseFloat(v.total); }); 
+            const agA = {}; f.forEach(v => { const a = v.area || "S/A"; if (!agA[a]) agA[a] = { g: 0, t: 0 }; agA[a].g += parseFloat(v.cantidad || 0); agA[a].t += parseFloat(v.total || 0); }); 
             document.getElementById('res_por_area').innerHTML = Object.entries(agA).map(([a, d]) => `<tr><td class="p-1">${a}</td><td class="p-1 text-center font-bold">${d.g.toFixed(1)}</td><td class="p-1 text-right font-bold">$${d.t.toFixed(2)}</td></tr>`).join(''); 
             updateChart(f); 
         }
 
         function updateChart(data) { 
             const ctx = document.getElementById('chartVentas').getContext('2d'); 
-            const ag = {}; data.forEach(v => ag[v.fecha] = (ag[v.fecha] || 0) + v.total); 
+            const ag = {}; data.forEach(v => ag[v.fecha] = (ag[v.fecha] || 0) + parseFloat(v.total || 0)); 
             const labels = Object.keys(ag).sort().slice(-7); 
             if (myChart) myChart.destroy(); 
             myChart = new Chart(ctx, { type: 'bar', data: { labels, datasets: [{ label: 'Ventas $', data: labels.map(l => ag[l]), backgroundColor: '#4f46e5' }] } }); 
@@ -412,18 +412,24 @@
             document.getElementById('v_cliente').innerHTML = opciones;
         }
 
+        // --- EL VÍNCULO CRÍTICO (CORREGIDO) ---
         function filtrarPlacas() {
             const clienteId = document.getElementById('v_cliente').value;
-            const filtrados = app.vehiculos.filter(v => (v.cid || v.CID) == clienteId);
+            // IMPORTANTE: Convertimos ambos a String para asegurar que coincidan (PC vs Excel)
+            const filtrados = app.vehiculos.filter(v => String(v.cid || v.CID) === String(clienteId));
+            
             let html = '<option value="">-- Placa --</option>';
             html += filtrados.map(v => `<option value="${v.placa || v.PLACA}">${v.placa || v.PLACA}</option>`).join('');
             document.getElementById('v_placa').innerHTML = html;
+            document.getElementById('v_area').value = ""; // Limpiar área al cambiar cliente
         }
 
         function actualizarArea() {
             const placa = document.getElementById('v_placa').value;
-            const v = app.vehiculos.find(v => (v.placa || v.PLACA) === placa);
-            if (v) document.getElementById('v_area').value = v.area || v.AREA || "";
+            const vehiculo = app.vehiculos.find(v => String(v.placa || v.PLACA) === String(placa));
+            if (vehiculo) {
+                document.getElementById('v_area').value = vehiculo.area || vehiculo.AREA || "";
+            }
         }
 
         function actualizarUI() {
@@ -445,7 +451,7 @@
             renderCompras();
             actualizarSelects();
             
-            console.log("🔄 Sincronizando con Excel...");
+            console.log("🔄 Sincronizando datos de Nube...");
             try {
                 const res = await fetch(WEB_APP_URL + "?action=readDB");
                 const data = await res.json();
@@ -459,9 +465,9 @@
                     renderVentas();
                     renderCompras();
                     actualizarSelects();
-                    console.log("✅ Datos sincronizados");
+                    console.log("✅ Sincronización completa");
                 }
-            } catch (e) { console.log("⚠️ Modo offline"); }
+            } catch (e) { console.warn("⚠️ Modo offline o error de red."); }
         }
 
         window.onload = function() {
