@@ -236,17 +236,43 @@ async function save(datosNube = null) {
             }
         }
        
-        function actualizarSelects() {
-    // Llenar select de Clientes
-    const h = '<option value="">-- Cliente --</option>' +
-        app.clientes.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
+     function actualizarSelects() {
+    // 1. Crear el encabezado del menú
+    let opciones = '<option value="">-- Seleccione Cliente --</option>';
+    
+    // 2. Generar las opciones de clientes
+    // Usamos || para que funcione si el Excel lo manda como 'id' o como 'ID'
+    opciones += app.clientes.map(c => {
+        const id = c.id || c.ID;
+        const nombre = c.nombre || c.NOMBRE;
+        return `<option value="${id}">${nombre}</option>`;
+    }).join('');
 
-    document.getElementById('adm_v_cli').innerHTML = h;
-    document.getElementById('v_cliente').innerHTML = h;
+    // 3. Inyectar el código en los dos selectores de clientes
+    const selectAdm = document.getElementById('adm_v_cli');
+    const selectVenta = document.getElementById('v_cliente');
 
-    // Nota: El select de placas se llena solo cuando eliges un cliente
+    if (selectAdm) selectAdm.innerHTML = opciones;
+    if (selectVenta) selectVenta.innerHTML = opciones;
+    
+    console.log("📊 Selectores de clientes actualizados");
 }
-        function filtrarVehiculos() { const cid = document.getElementById('v_cliente').value; document.getElementById('v_placa').innerHTML = '<option value="">-- Placa --</option>' + app.vehiculos.filter(v => v.cid == cid).map(v => `<option value="${v.placa}">${v.placa}</option>`).join(''); }
+        // Ejemplo de cómo debería ser tu filtro de placas para que lea bien del Excel
+ function filtrarPlacas() {
+     const clienteId = document.getElementById('v_cliente').value;
+     const selectPlaca = document.getElementById('v_placa');
+
+     // Filtramos los vehículos que pertenecen a ese cliente
+     const filtrados = app.vehiculos.filter(v => (v.cid || v.CID) == clienteId);
+
+     let html = '<option value="">-- Seleccione Placa --</option>';
+     html += filtrados.map(v => {
+         const placa = v.placa || v.PLACA;
+         return `<option value="${placa}">${placa}</option>`;
+     }).join('');
+
+     selectPlaca.innerHTML = html;
+ }
         function autoCompletarArea() { const v = app.vehiculos.find(v => v.placa === document.getElementById('v_placa').value); if (v) document.getElementById('v_area').value = v.area || ""; }
         function actualizarUI() { ["super", "regular", "diesel"].forEach(p => { const prod = p === "super" ? "Súper" : p === "regular" ? "Regular" : "Diésel"; document.getElementById('stk_' + p).innerText = (app.stock[prod] || 0).toFixed(1); }); }
         function descargarBackup() { const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(app)); const dl = document.createElement('a'); dl.setAttribute("href", dataStr); dl.setAttribute("download", "BACKUP_FUEL.json"); dl.click(); }
@@ -307,3 +333,4 @@ async function save(datosNube = null) {
     </script>
 </body>
 </html>
+
