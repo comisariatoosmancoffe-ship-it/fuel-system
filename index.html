@@ -265,20 +265,66 @@ function actualizarArea() {
         }
 
         function registrarCompra() {
-            const f = document.getElementById('c_fecha').value;
-            const prod = document.getElementById('c_prod').value;
-            const cant = parseFloat(document.getElementById('c_cant').value) || 0;
-            const totalC = parseFloat(document.getElementById('c_costo_total').value) || 0;
-            const idx = parseInt(document.getElementById('c_edit_index').value);
-            if (!f || cant <= 0) return alert("Faltan datos");
-            
-            const obj = { tipo: "COMPRA", fecha: f, factura: document.getElementById('c_factura').value, producto: prod, cantidad: cant, costoTotal: totalC, unitario: totalC / cant, precioVenta: parseFloat(document.getElementById('c_precio_venta').value) || 0 };
-            
-            if (idx > -1) { app.compras[idx] = obj; } else { app.compras.unshift(obj); }
-            app.precios[prod] = obj.precioVenta;
-            save(obj); 
-            cancelarCompra();
-        }
+    const f = document.getElementById('c_fecha').value;
+    const prod = document.getElementById('c_prod').value;
+    const cant = parseFloat(document.getElementById('c_cant').value) || 0;
+    const totalC = parseFloat(document.getElementById('c_costo_total').value) || 0;
+    const idx = parseInt(document.getElementById('c_edit_index').value);
+    
+    if (!f || cant <= 0) return alert("Faltan datos obligatorios en la compra");
+    
+    const obj = { 
+        tipo: "COMPRAS", // Asegúrate que en tu Excel la pestaña se llame COMPRAS
+        fecha: f, 
+        factura: document.getElementById('c_factura').value, 
+        producto: prod, 
+        cantidad: cant, 
+        costoTotal: totalC, 
+        unitario: totalC / cant, 
+        precioVenta: parseFloat(document.getElementById('c_precio_venta').value) || 0 
+    };
+    
+    if (idx > -1) { 
+        app.compras[idx] = obj; 
+    } else { 
+        app.compras.unshift(obj); 
+    }
+    
+    // Actualizar el precio de venta actual para este producto
+    app.precios[prod] = obj.precioVenta;
+    
+    // Guardar localmente y enviar a la nube
+    save(obj); 
+    cancelarCompra();
+    renderCompras(); // Forzar dibujo de la lista
+}
+
+function renderCompras() { 
+    const lista = document.getElementById('lista_compras');
+    if(!lista) return;
+    
+    lista.innerHTML = app.compras.map((c, i) => {
+        // Tolerancia a mayúsculas/minúsculas de la base de datos
+        const fecha = c.fecha || c.FECHA || '';
+        const factura = c.factura || c.FACTURA || '';
+        const producto = c.producto || c.PRODUCTO || '';
+        const cantidad = c.cantidad || c.CANTIDAD || 0;
+        const total = c.costoTotal || c.COSTOTOTAL || 0;
+
+        return `
+            <tr class="border-b">
+                <td class="p-2">${fecha}</td>
+                <td class="p-2 text-[9px]">${factura}</td>
+                <td class="p-2 font-bold">${producto}</td>
+                <td class="p-2">${cantidad}</td>
+                <td class="p-2 text-right font-bold">$${parseFloat(total).toFixed(2)}</td>
+                <td class="p-2 text-center">
+                    <button onclick="editarCompra(${i})" class="text-blue-500 mr-2">✎</button>
+                    <button onclick="eliminarCompra(${i})" class="text-red-500">🗑</button>
+                </td>
+            </tr>`;
+    }).join(''); 
+}
 
         function editarCompra(i) { 
             const c = app.compras[i]; 
@@ -511,14 +557,33 @@ function actualizarArea() {
     }
 }
 
-        function actualizarUI() {
-            ["Súper", "Regular", "Diésel"].forEach(prod => {
-                const c = app.compras.filter(i => (i.producto || i.PRODUCTO) === prod).reduce((s, i) => s + parseFloat(i.cantidad || 0), 0);
-                const v = app.ventas.filter(i => (i.producto || i.PRODUCTO) === prod).reduce((s, i) => s + parseFloat(i.cantidad || 0), 0);
-                const id = "stk_" + prod.toLowerCase().replace("ú", "u");
-                if (document.getElementById(id)) document.getElementById(id).innerText = (c - v).toFixed(1);
-            });
+       function actualizarUI() {
+    const productos = ["Súper", "Regular", "Diésel"];
+    
+    productos.forEach(prod => {
+        // Sumar todas las compras de este producto
+        const totalCompras = app.compras
+            .filter(i => (i.producto || i.PRODUCTO || "").toLowerCase() === prod.toLowerCase())
+            .reduce((s, i) => s + parseFloat(i.cantidad || i.CANTIDAD || 0), 0);
+            
+        // Sumar todas las ventas de este producto
+        const totalVentas = app.ventas
+            .filter(i => (i.producto || i.PRODUCTO || "").toLowerCase() === prod.toLowerCase())
+            .reduce((s, i) => s + parseFloat(i.cantidad || i.CANTIDAD || 0), 0);
+        
+        // Calcular stock
+        const stockActual = totalCompras - totalVentas;
+        
+        // Mostrar en los cuadritos de arriba
+        const idLabel = "stk_" + prod.toLowerCase().replace("ú", "u");
+        const elemento = document.getElementById(idLabel);
+        if (elemento) {
+            elemento.innerText = stockActual.toFixed(1);
+            // Opcional: poner en rojo si hay poco stock
+            elemento.style.color = stockActual < 100 ? "red" : "black";
         }
+    });
+}
 
         function descargarBackup() { const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(app)); const dl = document.createElement('a'); dl.setAttribute("href", dataStr); dl.setAttribute("download", "BACKUP_FUEL.json"); dl.click(); }
         function restaurarBackup(ev) { const reader = new FileReader(); reader.onload = e => { app = JSON.parse(e.target.result); save(); location.reload(); }; reader.readAsText(ev.target.files[0]); }
@@ -557,6 +622,7 @@ function actualizarArea() {
     </script>
 </body>
 </html>
+
 
 
 
