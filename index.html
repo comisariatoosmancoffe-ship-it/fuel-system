@@ -412,25 +412,48 @@
             document.getElementById('v_cliente').innerHTML = opciones;
         }
 
-        // --- EL VÍNCULO CRÍTICO (CORREGIDO) ---
-        function filtrarPlacas() {
-            const clienteId = document.getElementById('v_cliente').value;
-            // IMPORTANTE: Convertimos ambos a String para asegurar que coincidan (PC vs Excel)
-            const filtrados = app.vehiculos.filter(v => String(v.cid || v.CID) === String(clienteId));
-            
-            let html = '<option value="">-- Placa --</option>';
-            html += filtrados.map(v => `<option value="${v.placa || v.PLACA}">${v.placa || v.PLACA}</option>`).join('');
-            document.getElementById('v_placa').innerHTML = html;
-            document.getElementById('v_area').value = ""; // Limpiar área al cambiar cliente
-        }
+        // --- EL VÍNCULO CRÍTICO (VERSIÓN ULTRA-COMPATIBLE) ---
+function filtrarPlacas() {
+    const clienteIdRaw = document.getElementById('v_cliente').value;
+    // .trim() elimina espacios invisibles que el móvil a veces añade
+    const clienteId = String(clienteIdRaw).trim();
+    
+    console.log("Filtrando para cliente ID:", clienteId); // Para depurar en consola
 
-        function actualizarArea() {
-            const placa = document.getElementById('v_placa').value;
-            const vehiculo = app.vehiculos.find(v => String(v.placa || v.PLACA) === String(placa));
-            if (vehiculo) {
-                document.getElementById('v_area').value = vehiculo.area || vehiculo.AREA || "";
-            }
-        }
+    // Buscamos ignorando mayúsculas/minúsculas en las llaves (cid o CID)
+    const filtrados = app.vehiculos.filter(v => {
+        const v_cid = String(v.cid || v.CID || "").trim();
+        return v_cid === clienteId;
+    });
+    
+    let html = '<option value="">-- Placa --</option>';
+    if (filtrados.length > 0) {
+        html += filtrados.map(v => {
+            const p = (v.placa || v.PLACA || "").toUpperCase();
+            return `<option value="${p}">${p}</option>`;
+        }).join('');
+    } else {
+        console.warn("No se encontraron placas para este cliente en el móvil");
+    }
+    
+    document.getElementById('v_placa').innerHTML = html;
+    document.getElementById('v_area').value = ""; 
+}
+
+function actualizarArea() {
+    const placaRaw = document.getElementById('v_placa').value;
+    const placa = String(placaRaw).trim().toUpperCase();
+    
+    // Buscamos la placa con tolerancia a fallos de escritura
+    const vehiculo = app.vehiculos.find(v => {
+        const v_placa = String(v.placa || v.PLACA || "").trim().toUpperCase();
+        return v_placa === placa;
+    });
+
+    if (vehiculo) {
+        document.getElementById('v_area').value = vehiculo.area || vehiculo.AREA || "";
+    }
+}
 
         function actualizarUI() {
             ["Súper", "Regular", "Diésel"].forEach(prod => {
@@ -478,6 +501,7 @@
     </script>
 </body>
 </html>
+
 
 
 
