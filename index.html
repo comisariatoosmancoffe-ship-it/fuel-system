@@ -299,31 +299,34 @@ function actualizarArea() {
     renderCompras(); // Forzar dibujo de la lista
 }
 
-function renderCompras() {
+function renderCompras() { 
     const lista = document.getElementById('lista_compras');
-    if (!lista) return;
-
+    if(!lista) return;
+    
     lista.innerHTML = app.compras.map((c, i) => {
-        // Tolerancia a mayúsculas/minúsculas de la base de datos
         const fecha = c.fecha || c.FECHA || '';
         const factura = c.factura || c.FACTURA || '';
         const producto = c.producto || c.PRODUCTO || '';
         const cantidad = c.cantidad || c.CANTIDAD || 0;
-        const total = c.costoTotal || c.COSTOTOTAL || 0;
+
+        // CORRECCIÓN AQUÍ: Forzar que el costo total sea número
+        let totalVal = c.costoTotal || c.COSTOTOTAL || 0;
+        if (typeof totalVal === "string") totalVal = totalVal.replace(/[^0-9.]/g, '');
+        const totalNum = parseFloat(totalVal) || 0;
 
         return `
-    <tr class="border-b">
-        <td class="p-2">${fecha}</td>
-        <td class="p-2 text-[9px]">${factura}</td>
-        <td class="p-2 font-bold">${producto}</td>
-        <td class="p-2">${cantidad}</td>
-        <td class="p-2 text-right font-bold">$${parseFloat(total).toFixed(2)}</td>
-        <td class="p-2 text-center">
-            <button onclick="editarCompra(${i})" class="text-blue-500 mr-2">✎</button>
-            <button onclick="eliminarCompra(${i})" class="text-red-500">🗑</button>
-        </td>
-    </tr>`;
-    }).join('');
+            <tr class="border-b">
+                <td class="p-2">${fecha}</td>
+                <td class="p-2 text-[9px]">${factura}</td>
+                <td class="p-2 font-bold">${producto}</td>
+                <td class="p-2">${cantidad}</td>
+                <td class="p-2 text-right font-bold">$${totalNum.toFixed(2)}</td>
+                <td class="p-2 text-center">
+                    <button onclick="editarCompra(${i})" class="text-blue-500 mr-2">✎</button>
+                    <button onclick="eliminarCompra(${i})" class="text-red-500">🗑</button>
+                </td>
+            </tr>`;
+    }).join(''); 
 }
 
         function editarCompra(i) { 
@@ -652,6 +655,7 @@ function actualizarArea() {
     </script>
 </body>
 </html>
+
 
 
 
