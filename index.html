@@ -236,7 +236,16 @@ async function save(datosNube = null) {
             }
         }
        
-        function actualizarSelects() { const h = '<option value="">-- Cliente --</option>' + app.clientes.map(c => `<option value="${c.id}">${c.nombre}</option>`).join(''); document.getElementById('adm_v_cli').innerHTML = document.getElementById('v_cliente').innerHTML = h; }
+        function actualizarSelects() {
+    // Llenar select de Clientes
+    const h = '<option value="">-- Cliente --</option>' +
+        app.clientes.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
+
+    document.getElementById('adm_v_cli').innerHTML = h;
+    document.getElementById('v_cliente').innerHTML = h;
+
+    // Nota: El select de placas se llena solo cuando eliges un cliente
+}
         function filtrarVehiculos() { const cid = document.getElementById('v_cliente').value; document.getElementById('v_placa').innerHTML = '<option value="">-- Placa --</option>' + app.vehiculos.filter(v => v.cid == cid).map(v => `<option value="${v.placa}">${v.placa}</option>`).join(''); }
         function autoCompletarArea() { const v = app.vehiculos.find(v => v.placa === document.getElementById('v_placa').value); if (v) document.getElementById('v_area').value = v.area || ""; }
         function actualizarUI() { ["super", "regular", "diesel"].forEach(p => { const prod = p === "super" ? "Súper" : p === "regular" ? "Regular" : "Diésel"; document.getElementById('stk_' + p).innerText = (app.stock[prod] || 0).toFixed(1); }); }
@@ -244,8 +253,40 @@ async function save(datosNube = null) {
         function restaurarBackup(ev) { const reader = new FileReader(); reader.onload = e => { app = JSON.parse(e.target.result); save(); location.reload(); }; reader.readAsText(ev.target.files[0]); }
         function borrarTodo() { if (confirm("¿BORRAR TODO? Se perderán clientes y registros locales.")) { localStorage.clear(); location.reload(); } }
 
-        document.getElementById('v_fecha').valueAsDate = new Date(); document.getElementById('c_fecha').valueAsDate = new Date(); actualizarUI(); renderVentas(); renderCompras(); actualizarSelects();
-           console.log("Sincronizando con Excel...");
+        window.onload = async function () {
+    console.log("🔄 Conectando con la base de datos central...");
+
+    // 1. Primero cargamos lo que haya en la memoria del celular
+    actualizarUI();
+    renderVentas();
+    renderCompras();
+    actualizarSelects();
+
+    // 2. Intentamos traer datos frescos de Google Sheets
+    try {
+        // Llamamos a la acción "readDB" que creamos en el Script de Google
+        const respuesta = await fetch(WEB_APP_URL + "?action=readDB");
+        const dataNube = await respuesta.json();
+
+        if (dataNube) {
+            // Reemplazamos las listas locales con las de la nube (Excel)
+            if (dataNube.clientes && dataNube.clientes.length > 0) {
+                app.clientes = dataNube.clientes;
+            }
+            if (dataNube.vehiculos && dataNube.vehiculos.length > 0) {
+                app.vehiculos = dataNube.vehiculos;
+            }
+
+            // Guardamos esto en el celular para que funcione aunque no haya internet después
+            localStorage.setItem('fuelDB', JSON.stringify(app));
+
+            // Refrescamos la pantalla con los datos nuevos
+            actualizarSelects();
+            console.log("✅ Datos sincronizados desde la nube");
+        }
+    } catch (e) {
+        console.warn("⚠️ Modo Offline: No se pudo conectar con la nube, usando datos locales.");
+    }
     try {
         const res = await fetch(WEB_APP_URL + "?action=readDB");
         const data = await res.json();
@@ -261,16 +302,3 @@ async function save(datosNube = null) {
 </body>
 
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
