@@ -125,27 +125,28 @@
         };
         let myChart = null;
 
-       async function save(datosNube = null) {
-    localStorage.setItem('fuelDB', JSON.stringify(app));
-    actualizarUI(); renderVentas(); renderCompras();
+   function doGet(e) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var data = e.parameter;
+  var sheet = ss.getSheetByName(data.tipo === "VENTA" ? "VENTAS" : "COMPRAS");
+  
+  if (!sheet) return ContentService.createTextOutput("Error: Hoja no existe");
 
-    if (datosNube) {
-        // Esta parte es la que envía los datos a las columnas
-        const queryParams = new URLSearchParams(datosNube).toString();
-        const urlFinal = WEB_APP_URL + (WEB_APP_URL.includes('?') ? '&' : '?') + queryParams;
-
-        try {
-            await fetch(urlFinal, { 
-                method: 'GET', 
-                mode: 'no-cors' 
-            });
-            console.log("✅ Sincronizado con éxito");
-        } catch (e) {
-            console.error("❌ Error de sincronización", e);
-        }
-    }
+  if (data.tipo === "VENTA") {
+    sheet.appendRow([
+      data.fecha, data.orden, data.cliente, data.placa, 
+      data.area, data.producto, data.cantidad, 
+      data.precio, data.descuento, data.total
+    ]);
+  } else {
+    sheet.appendRow([
+      data.fecha, data.factura, data.producto, 
+      data.cantidad, data.costoTotal, data.unitario, data.precioVenta
+    ]);
+  }
+  
+  return ContentService.createTextOutput("OK").setMimeType(ContentService.MimeType.TEXT);
 }
-
         function verTab(t) { document.querySelectorAll('section').forEach(s => s.classList.add('hidden')); document.getElementById('sec-' + t).classList.remove('hidden'); if (t === 'contabilidad') calcularContabilidad(); }
 
         // --- LÓGICA COMPRAS ---
@@ -212,6 +213,7 @@
 </body>
 
 </html>
+
 
 
 
