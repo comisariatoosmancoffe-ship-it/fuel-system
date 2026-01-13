@@ -376,43 +376,49 @@ function renderCompras() {
             document.getElementById('v_total').innerText = ((c * p) - d).toFixed(2); 
         }
 
-        function realizarVenta() {
-            const prod = document.getElementById('v_prod').value;
-            const cant = parseFloat(document.getElementById('v_cant').value) || 0;
-            const cid = document.getElementById('v_cliente').value;
-            const placa = document.getElementById('v_placa').value;
-            const idx = parseInt(document.getElementById('v_edit_index').value);
-            
-            if (!prod || !placa || !cid) return alert("Faltan datos obligatorios");
-            
-            const clientObj = app.clientes.find(c => String(c.id || c.ID) === String(cid));
-            
-            const ven = { 
-                tipo: "VENTA", 
-                fecha: document.getElementById('v_fecha').value, 
-                orden: document.getElementById('v_orden').value, 
-                cliente: clientObj.nombre || clientObj.NOMBRE, 
-                placa: placa, 
-                area: document.getElementById('v_area').value, 
-                producto: (prod === "ANULADA" || cant === 0) ? "--- ANULADA ---" : prod, 
-                cantidad: cant, 
-                precio: parseFloat(document.getElementById('v_precio').value), 
-                descuento: parseFloat(document.getElementById('v_desc').value), 
-                total: parseFloat(document.getElementById('v_total').innerText), 
-                clienteId: cid 
-            };
+       function realizarVenta() {
+    const prod = document.getElementById('v_prod').value;
+    const cant = parseFloat(document.getElementById('v_cant').value) || 0;
+    const cid = document.getElementById('v_cliente').value;
+    const placa = document.getElementById('v_placa').value;
+    const idx = parseInt(document.getElementById('v_edit_index').value);
 
-            if (idx > -1) app.ventas[idx] = ven; 
-            else { 
-                app.ventas.unshift(ven); 
-                let ord = document.getElementById('v_orden').value; 
-                if (!isNaN(ord) && ord !== "") document.getElementById('v_orden').value = parseInt(ord) + 1; 
-            }
-            save(ven);
-            cancelarVenta();
-            renderVentas(); // Dibujar lista de ventas
-            actualizarUI(); // Actualizar inventario inmediatamente
-        }
+    if (!prod || !placa || !cid || cant <= 0) {
+        alert("Por favor rellene: Cliente, Placa, Producto y Cantidad");
+        return;
+    }
+
+    const clientObj = app.clientes.find(c => String(c.id || c.ID) === String(cid));
+
+    const ven = {
+        tipo: "VENTAS", // Debe coincidir con el nombre de tu hoja en Excel
+        fecha: document.getElementById('v_fecha').value,
+        orden: document.getElementById('v_orden').value,
+        cliente: clientObj ? (clientObj.nombre || clientObj.NOMBRE) : "Desconocido",
+        placa: placa,
+        area: document.getElementById('v_area').value,
+        producto: (prod === "ANULADA") ? "--- ANULADA ---" : prod,
+        cantidad: cant,
+        precio: parseFloat(document.getElementById('v_precio').value) || 0,
+        descuento: parseFloat(document.getElementById('v_desc').value) || 0,
+        total: parseFloat(document.getElementById('v_total').innerText) || 0,
+        clienteId: cid
+    };
+
+    if (idx > -1) {
+        app.ventas[idx] = ven;
+    } else {
+        app.ventas.unshift(ven);
+        // Incrementar número de orden automáticamente si es numérico
+        let ord = document.getElementById('v_orden').value;
+        if (!isNaN(ord) && ord !== "") document.getElementById('v_orden').value = parseInt(ord) + 1;
+    }
+
+    save(ven); // Esta es la función que ya arreglamos y que envía a la nube
+    cancelarVenta();
+    renderVentas();
+    actualizarUI(); // Para que el stock baje inmediatamente en los cuadros de arriba
+}
 
         function editarVenta(i) { 
             const v = app.ventas[i]; 
@@ -441,19 +447,32 @@ function renderCompras() {
             document.getElementById('v_total').innerText = "0.00"; 
         }
 
-        function renderVentas() {
-            document.getElementById('lista_ventas').innerHTML = app.ventas.map((v, i) => `
-                <tr class="border-b">
-                    <td class="p-2">${v.fecha || ''}<br><span class="text-blue-600 font-bold">${v.orden || ''}</span></td>
-                    <td class="p-2 font-bold">${v.placa || ''}</td>
-                    <td class="p-2">${v.producto || ''}<br>${v.cantidad || 0} Gls</td>
-                    <td class="p-2 text-right font-bold">$${parseFloat(v.total || 0).toFixed(2)}</td>
-                    <td class="p-2 text-center">
-                        <button onclick="editarVenta(${i})" class="text-blue-500 mr-1">✎</button>
-                        <button onclick="eliminarVenta(${i})" class="text-red-500">🗑</button>
-                    </td>
-                </tr>`).join('');
-        }
+       function renderVentas() {
+    const lista = document.getElementById('lista_ventas');
+    if (!lista) return;
+
+    lista.innerHTML = app.ventas.map((v, i) => {
+        // Soporte para mayúsculas y minúsculas de la nube
+        const fecha = v.fecha || v.FECHA || '';
+        const orden = v.orden || v.ORDEN || '';
+        const placa = v.placa || v.PLACA || '';
+        const prod = v.producto || v.PRODUCTO || '';
+        const cant = v.cantidad || v.CANTIDAD || 0;
+        const total = v.total || v.TOTAL || 0;
+
+        return `
+            <tr class="border-b">
+                <td class="p-2">${fecha}<br><span class="text-blue-600 font-bold">${orden}</span></td>
+                <td class="p-2 font-bold">${placa}</td>
+                <td class="p-2">${prod}<br>${cant} Gls</td>
+                <td class="p-2 text-right font-bold">$${parseFloat(total).toFixed(2)}</td>
+                <td class="p-2 text-center">
+                    <button onclick="editarVenta(${i})" class="text-blue-500 mr-1">✎</button>
+                    <button onclick="eliminarVenta(${i})" class="text-red-500">🗑</button>
+                </td>
+            </tr>`;
+    }).join('');
+}
 
         // --- REPORTES ---
         function exportarVentasExcel() { const ws = XLSX.utils.json_to_sheet(app.ventas); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Ventas"); XLSX.writeFile(wb, "Historial_Ventas.xlsx"); }
@@ -559,34 +578,83 @@ function actualizarArea() {
     }
 }
 
-       function actualizarUI() {
-    const productos = ["Súper", "Regular", "Diésel"];
+      // function actualizarUI() {
+   // const productos = ["Súper", "Regular", "Diésel"];
     
-    productos.forEach(prod => {
+  //  productos.forEach(prod => {
         // Sumar todas las compras de este producto
-        const totalCompras = app.compras
-            .filter(i => (i.producto || i.PRODUCTO || "").toLowerCase() === prod.toLowerCase())
-            .reduce((s, i) => s + parseFloat(i.cantidad || i.CANTIDAD || 0), 0);
+        //const totalCompras = app.compras
+           // .filter(i => (i.producto || i.PRODUCTO || "").toLowerCase() === prod.toLowerCase())
+           // .reduce((s, i) => s + parseFloat(i.cantidad || i.CANTIDAD || 0), 0);
             
         // Sumar todas las ventas de este producto
-        const totalVentas = app.ventas
-            .filter(i => (i.producto || i.PRODUCTO || "").toLowerCase() === prod.toLowerCase())
-            .reduce((s, i) => s + parseFloat(i.cantidad || i.CANTIDAD || 0), 0);
+       // const totalVentas = app.ventas
+           // .filter(i => (i.producto || i.PRODUCTO || "").toLowerCase() === prod.toLowerCase())
+           // .reduce((s, i) => s + parseFloat(i.cantidad || i.CANTIDAD || 0), 0);
         
         // Calcular stock
-        const stockActual = totalCompras - totalVentas;
+       // const stockActual = totalCompras - totalVentas;
         
         // Mostrar en los cuadritos de arriba
-        const idLabel = "stk_" + prod.toLowerCase().replace("ú", "u");
-        const elemento = document.getElementById(idLabel);
-        if (elemento) {
-            elemento.innerText = stockActual.toFixed(1);
+       // const idLabel = "stk_" + prod.toLowerCase().replace("ú", "u");
+        //const elemento = document.getElementById(idLabel);
+        //if (elemento) {
+           // elemento.innerText = stockActual.toFixed(1);
             // Opcional: poner en rojo si hay poco stock
-            elemento.style.color = stockActual < 100 ? "red" : "black";
-        }
-    });
-}
+           // elemento.style.color = stockActual < 100 ? "red" : "black";
+       // }
+   // });
+//}
 
+ function actualizarUI() {
+     const productos = ["Súper", "Regular", "Diésel"];
+
+     productos.forEach(prod => {
+         // Sumar compras (buscando cantidad o CANTIDAD)
+         const c = app.compras
+             .filter(i => (i.producto || i.PRODUCTO || "").toLowerCase() === prod.toLowerCase())
+             .reduce((s, i) => s + parseFloat(i.cantidad || i.CANTIDAD || 0), 0);
+
+         // Sumar ventas (buscando cantidad o CANTIDAD)
+         const v = app.ventas
+             .filter(i => (i.producto || i.PRODUCTO || "").toLowerCase() === prod.toLowerCase())
+             .reduce((s, i) => s + parseFloat(i.cantidad || i.CANTIDAD || 0), 0);
+
+         const id = "stk_" + prod.toLowerCase().replace("ú", "u");
+         const el = document.getElementById(id);
+         if (el) el.innerText = (c - v).toFixed(1);
+     });
+ }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
         function descargarBackup() { const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(app)); const dl = document.createElement('a'); dl.setAttribute("href", dataStr); dl.setAttribute("download", "BACKUP_FUEL.json"); dl.click(); }
         function restaurarBackup(ev) { const reader = new FileReader(); reader.onload = e => { app = JSON.parse(e.target.result); save(); location.reload(); }; reader.readAsText(ev.target.files[0]); }
         function borrarTodo() { if (confirm("¿BORRAR TODO?")) { localStorage.clear(); location.reload(); } }
@@ -624,6 +692,7 @@ function actualizarArea() {
     </script>
 </body>
 </html>
+
 
 
 
