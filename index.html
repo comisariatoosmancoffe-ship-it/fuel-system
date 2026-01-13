@@ -125,24 +125,26 @@
         };
         let myChart = null;
 
-        async function save(datosNube = null) {
-            localStorage.setItem('fuelDB', JSON.stringify(app));
-            actualizarUI(); renderVentas(); renderCompras();
+       async function save(datosNube = null) {
+    localStorage.setItem('fuelDB', JSON.stringify(app));
+    actualizarUI(); renderVentas(); renderCompras();
 
-            // Envío a Google Sheets
-            if (datosNube) {
-                try {
-                    await fetch(WEB_APP_URL, {
-                        method: 'POST',
-                        mode: 'no-cors',
-                        body: JSON.stringify(datosNube)
-                    });
-                    console.log("☁️ Nube sincronizada correctamente");
-                } catch (e) {
-                    console.error("❌ Error de red con la nube", e);
-                }
-            }
+    if (datosNube) {
+        // Esta parte es la que envía los datos a las columnas
+        const queryParams = new URLSearchParams(datosNube).toString();
+        const urlFinal = WEB_APP_URL + (WEB_APP_URL.includes('?') ? '&' : '?') + queryParams;
+
+        try {
+            await fetch(urlFinal, { 
+                method: 'GET', 
+                mode: 'no-cors' 
+            });
+            console.log("✅ Sincronizado con éxito");
+        } catch (e) {
+            console.error("❌ Error de sincronización", e);
         }
+    }
+}
 
         function verTab(t) { document.querySelectorAll('section').forEach(s => s.classList.add('hidden')); document.getElementById('sec-' + t).classList.remove('hidden'); if (t === 'contabilidad') calcularContabilidad(); }
 
@@ -210,6 +212,7 @@
 </body>
 
 </html>
+
 
 
 
