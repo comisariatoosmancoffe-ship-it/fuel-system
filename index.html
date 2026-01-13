@@ -408,8 +408,10 @@ function renderCompras() {
                 let ord = document.getElementById('v_orden').value; 
                 if (!isNaN(ord) && ord !== "") document.getElementById('v_orden').value = parseInt(ord) + 1; 
             }
-            save(ven); 
+            save(ven);
             cancelarVenta();
+            renderVentas(); // Dibujar lista de ventas
+            actualizarUI(); // Actualizar inventario inmediatamente
         }
 
         function editarVenta(i) { 
@@ -622,6 +624,7 @@ function actualizarArea() {
     </script>
 </body>
 </html>
+
 
 
 
