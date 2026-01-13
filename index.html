@@ -117,7 +117,7 @@
     <script>
         // --- CONFIGURACIÓN DE NUBE (VINCULADA) ---
         console.log("Versión Nueva 2.0");
-        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbySMoRe1o3A-D8Mk7bGOXdAplVm6uO_nRvN7pjryGnorfg6egnezKWZgK2Cz1Mlz1ycLg/exec";
+        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxB4gQH8thcY8AovzFAomKlGCL9hL5bnHVSOqW1IrGvyzQX4qD_fkEWbrSiTbkwO4U3/exec";
         let app = JSON.parse(localStorage.getItem('fuelDB')) || {
             clientes: [], vehiculos: [], ventas: [], compras: [],
             stock: { "Súper": 0, "Regular": 0, "Diésel": 0 },
@@ -209,8 +209,33 @@ async function save(datosNube = null) {
         function updateChart(data) { const ctx = document.getElementById('chartVentas').getContext('2d'); const ag = {}; data.forEach(v => ag[v.fecha] = (ag[v.fecha] || 0) + v.total); const labels = Object.keys(ag).sort().slice(-7); if (myChart) myChart.destroy(); myChart = new Chart(ctx, { type: 'bar', data: { labels, datasets: [{ label: 'Ventas $', data: labels.map(l => ag[l]), backgroundColor: '#4f46e5' }] } }); }
 
         // --- ADMIN ---
-        function addCliente() { const n = document.getElementById('adm_c_nom').value; if (n) { app.clientes.push({ id: Date.now(), nombre: n }); save(); actualizarSelects(); document.getElementById('adm_c_nom').value = ""; } }
-        function addVehiculo() { const p = document.getElementById('adm_v_pla').value.toUpperCase(), c = document.getElementById('adm_v_cli').value; if (p && c) { app.vehiculos.push({ placa: p, cid: c, area: document.getElementById('adm_v_area').value }); save(); alert("Vehículo vinculado"); } }
+                function addCliente() {
+            const n = document.getElementById('adm_c_nom').value;
+            if (n) {
+                const nuevoCliente = { tipo: "CLIENTES", id: Date.now(), nombre: n };
+                app.clientes.push(nuevoCliente);
+                save(nuevoCliente); // Esto lo envía al Excel
+                actualizarSelects();
+                document.getElementById('adm_c_nom').value = "";
+            }
+        }
+
+        function addVehiculo() {
+            const p = document.getElementById('adm_v_pla').value.toUpperCase();
+            const c = document.getElementById('adm_v_cli').value;
+            const a = document.getElementById('adm_v_area').value; // Tomamos el área
+
+            if (p && c) {
+                const nuevoVehiculo = { tipo: "VEHICULOS", placa: p, cid: c, area: a };
+                app.vehiculos.push(nuevoVehiculo);
+                save(nuevoVehiculo); // Esto lo envía al Excel
+                actualizarSelects();
+                alert("✅ Vehículo y Área vinculados en la nube");
+                document.getElementById('adm_v_pla').value = "";
+                document.getElementById('adm_v_area').value = "";
+            }
+        }
+       
         function actualizarSelects() { const h = '<option value="">-- Cliente --</option>' + app.clientes.map(c => `<option value="${c.id}">${c.nombre}</option>`).join(''); document.getElementById('adm_v_cli').innerHTML = document.getElementById('v_cliente').innerHTML = h; }
         function filtrarVehiculos() { const cid = document.getElementById('v_cliente').value; document.getElementById('v_placa').innerHTML = '<option value="">-- Placa --</option>' + app.vehiculos.filter(v => v.cid == cid).map(v => `<option value="${v.placa}">${v.placa}</option>`).join(''); }
         function autoCompletarArea() { const v = app.vehiculos.find(v => v.placa === document.getElementById('v_placa').value); if (v) document.getElementById('v_area').value = v.area || ""; }
@@ -220,10 +245,23 @@ async function save(datosNube = null) {
         function borrarTodo() { if (confirm("¿BORRAR TODO? Se perderán clientes y registros locales.")) { localStorage.clear(); location.reload(); } }
 
         document.getElementById('v_fecha').valueAsDate = new Date(); document.getElementById('c_fecha').valueAsDate = new Date(); actualizarUI(); renderVentas(); renderCompras(); actualizarSelects();
+           console.log("Sincronizando con Excel...");
+    try {
+        const res = await fetch(WEB_APP_URL + "?action=readDB");
+        const data = await res.json();
+        if (data.clientes.length > 0) app.clientes = data.clientes;
+        if (data.vehiculos.length > 0) app.vehiculos = data.vehiculos;
+
+        localStorage.setItem('fuelDB', JSON.stringify(app));
+        actualizarSelects();
+        actualizarUI();
+    } catch (e) { console.log("Modo offline"); }
+};    
     </script>
 </body>
 
 </html>
+
 
 
 
