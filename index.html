@@ -2,373 +2,318 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FuelSystem Pro v7.0 - CLOUD SYNC</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FuelMaster Pro v8.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"></script>
 </head>
-<body class="bg-slate-100 min-h-screen pb-20">
+<body class="bg-gray-100 min-h-screen text-gray-800">
 
-    <nav class="bg-blue-900 text-white p-4 sticky top-0 z-50 shadow-xl">
-        <div class="container mx-auto flex justify-between items-center">
-            <h1 class="font-black italic text-lg text-yellow-400">⛽ FUEL-MASTER CLOUD v7.0</h1>
-            <div class="flex space-x-1 text-[10px] font-bold">
-                <button onclick="verTab('ventas')" class="bg-blue-700 px-2 py-1 rounded">VENTAS</button>
-                <button onclick="verTab('compras')" class="bg-emerald-700 px-2 py-1 rounded">COMPRAS</button>
-                <button onclick="verTab('contabilidad')" class="bg-purple-700 px-2 py-1 rounded">REPORTES</button>
-                <button onclick="verTab('admin')" class="bg-slate-700 px-2 py-1 rounded">ADMIN</button>
+    <nav class="bg-slate-900 text-white p-4 sticky top-0 z-50 shadow-2xl border-b-2 border-yellow-500">
+        <div class="flex justify-between items-center max-w-6xl mx-auto">
+            <h1 class="font-black italic text-xl tracking-tighter">FUEL<span class="text-yellow-400">MASTER</span></h1>
+            <div class="flex gap-2">
+                <button onclick="sincronizar()" class="bg-blue-600 px-3 py-1 rounded-lg text-xs font-bold">
+                    <i class="fas fa-sync"></i> SYNC
+                </button>
+                <div id="status-cloud" class="w-3 h-3 bg-red-500 rounded-full animate-pulse mt-2"></div>
             </div>
+        </div>
+        <div class="flex justify-around mt-4 text-[10px] font-bold uppercase tracking-widest">
+            <button onclick="verTab('ventas')" class="tab-btn border-b-2 border-yellow-400 pb-1" id="tab-ventas">Ventas</button>
+            <button onclick="verTab('compras')" class="tab-btn border-b-2 border-transparent pb-1" id="tab-compras">Compras</button>
+            <button onclick="verTab('reportes')" class="tab-btn border-b-2 border-transparent pb-1" id="tab-reportes">Reportes</button>
+            <button onclick="verTab('admin')" class="tab-btn border-b-2 border-transparent pb-1" id="tab-admin">Admin</button>
         </div>
     </nav>
 
-    <main class="container mx-auto p-2 max-w-6xl">
-        <div class="grid grid-cols-3 gap-2 mb-4 text-center font-bold">
-            <div class="bg-white p-2 rounded shadow border-b-4 border-orange-500">
-                <p class="text-[10px] text-gray-400 uppercase">Súper</p>
-                <p class="text-sm"><span id="stk_super">0</span> <small>Gls</small></p>
+    <main class="p-3 max-w-6xl mx-auto">
+        <div class="grid grid-cols-3 gap-2 mb-4">
+            <div class="bg-white p-3 rounded-xl shadow-sm border-l-4 border-orange-500">
+                <p class="text-[9px] font-bold text-gray-400 uppercase">Súper</p>
+                <p class="text-lg font-black"><span id="inv-super">0</span> <small class="text-[10px] text-gray-400">Gls</small></p>
             </div>
-            <div class="bg-white p-2 rounded shadow border-b-4 border-red-500">
-                <p class="text-[10px] text-gray-400 uppercase">Regular</p>
-                <p class="text-sm"><span id="stk_regular">0</span> <small>Gls</small></p>
+            <div class="bg-white p-3 rounded-xl shadow-sm border-l-4 border-red-500">
+                <p class="text-[9px] font-bold text-gray-400 uppercase">Regular</p>
+                <p class="text-lg font-black"><span id="inv-regular">0</span> <small class="text-[10px] text-gray-400">Gls</small></p>
             </div>
-            <div class="bg-white p-2 rounded shadow border-b-4 border-black">
-                <p class="text-[10px] text-gray-400 uppercase">Diésel</p>
-                <p class="text-sm"><span id="stk_diesel">0</span> <small>Gls</small></p>
+            <div class="bg-white p-3 rounded-xl shadow-sm border-l-4 border-gray-900">
+                <p class="text-[9px] font-bold text-gray-400 uppercase">Diesel</p>
+                <p class="text-lg font-black"><span id="inv-diesel">0</span> <small class="text-[10px] text-gray-400">Gls</small></p>
             </div>
         </div>
 
-        <section id="sec-ventas">
-            <div class="bg-white p-6 rounded-2xl shadow-xl border-t-4 border-blue-600 mb-6">
-                <div class="grid grid-cols-2 gap-3 mb-4">
-                    <input type="date" id="v_fecha" class="p-3 border rounded-xl bg-gray-50">
-                    <input type="text" id="v_orden" placeholder="No. Orden" class="p-3 border rounded-xl font-bold text-blue-600">
+        <section id="sec-ventas" class="tab-content">
+            <div class="bg-white p-5 rounded-2xl shadow-lg mb-6 border border-gray-200">
+                <div class="grid grid-cols-2 gap-2 mb-3">
+                    <input type="date" id="v-fecha" class="p-2 bg-gray-50 border rounded-lg text-sm">
+                    <input type="text" id="v-orden" placeholder="No. Orden" class="p-2 bg-gray-50 border rounded-lg text-sm font-bold">
                 </div>
-                <div class="grid grid-cols-1 gap-4">
+                
+                <div class="space-y-3">
+                    <select id="v-cliente" onchange="cargarVehiculos()" class="w-full p-3 border rounded-xl bg-white shadow-sm font-semibold"></select>
+                    <select id="v-placa" onchange="cargarArea()" class="w-full p-3 border rounded-xl bg-blue-50 font-bold"></select>
+                    <input type="text" id="v-area" placeholder="Área" readonly class="w-full p-2 bg-gray-100 border rounded-lg text-xs italic">
+                    
                     <div class="grid grid-cols-2 gap-2">
-                        <select id="v_cliente" onchange="filtrarPlacas()" class="p-3 border rounded-xl">
-                            <option value="">-- Cliente --</option>
+                        <select id="v-producto" onchange="autoPrecio()" class="p-3 border rounded-xl font-bold bg-yellow-50">
+                            <option value="">Producto</option>
+                            <option value="Súper">Súper</option>
+                            <option value="Regular">Regular</option>
+                            <option value="Diésel">Diésel</option>
                         </select>
-                        <select id="v_placa" onchange="actualizarArea()" class="p-3 border rounded-xl bg-blue-50 font-bold">
-                            <option value="">-- Placa --</option>
-                        </select>
+                        <input type="number" id="v-cant" oninput="calcVenta()" placeholder="Gls" class="p-3 border rounded-xl text-center font-black text-lg">
                     </div>
-                    <input type="text" id="v_area" placeholder="Área" class="p-3 border rounded-xl bg-gray-50 italic">
-                    <select id="v_prod" onchange="asignarPrecioAuto()" class="p-3 border rounded-xl font-bold border-blue-200">
-                        <option value="">-- Combustible --</option>
-                        <option value="Súper">Súper</option>
-                        <option value="Regular">Regular</option>
-                        <option value="Diésel">Diésel</option>
-                        <option value="ANULADA">ANULADA</option>
-                    </select>
-                    <div class="grid grid-cols-3 gap-2">
-                        <input type="number" id="v_cant" oninput="calcVenta()" placeholder="Gls" class="p-3 border rounded-xl font-bold">
-                        <input type="number" id="v_precio" oninput="calcVenta()" placeholder="$" class="p-3 border rounded-xl bg-gray-100 font-bold">
-                        <input type="number" id="v_desc" oninput="calcVenta()" value="0" class="p-3 border rounded-xl bg-red-50 text-red-600 font-bold">
+
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="number" id="v-precio" oninput="calcVenta()" placeholder="Precio $" class="p-2 border rounded-lg text-sm">
+                        <input type="number" id="v-desc" oninput="calcVenta()" placeholder="Desc. $" class="p-2 border rounded-lg text-sm text-red-500">
                     </div>
                 </div>
-                <div class="mt-4 bg-slate-900 text-white p-4 rounded-xl flex justify-between items-center">
-                    <span class="text-2xl font-black text-green-400">$ <span id="v_total">0.00</span></span>
-                    <input type="hidden" id="v_edit_index" value="-1">
-                    <div class="flex space-x-2">
-                        <button onclick="cancelarVenta()" class="bg-slate-600 px-3 py-2 rounded-lg font-bold text-[10px]">LIMPIAR</button>
-                        <button id="btn-registrar" onclick="realizarVenta()" class="bg-blue-600 px-6 py-2 rounded-lg font-bold uppercase text-xs">Guardar</button>
+
+                <div class="mt-5 p-4 bg-slate-800 rounded-xl flex justify-between items-center text-white">
+                    <div>
+                        <p class="text-[10px] uppercase text-gray-400">Total a Cobrar</p>
+                        <p class="text-2xl font-black text-green-400">$ <span id="v-total">0.00</span></p>
                     </div>
+                    <button onclick="guardarVenta()" class="bg-blue-600 hover:bg-blue-700 px-8 py-3 rounded-xl font-bold uppercase text-sm shadow-lg active:scale-95 transition-all">Guardar</button>
                 </div>
             </div>
-            
-            <div class="bg-white rounded-xl shadow overflow-hidden">
-                <div class="p-3 bg-gray-800 text-white flex justify-between items-center">
-                    <span class="text-[10px] font-bold uppercase">Registro Local</span>
-                    <button onclick="exportarVentasExcel()" class="bg-green-600 px-2 py-1 rounded text-[10px]">EXCEL</button>
+
+            <div class="bg-white rounded-xl shadow-md overflow-hidden">
+                <div class="bg-gray-100 p-3 text-[10px] font-bold flex justify-between">
+                    <span>HISTORIAL LOCAL</span>
+                    <span id="contador-ventas">0 registros</span>
                 </div>
                 <div class="overflow-x-auto">
-                    <table class="w-full text-[11px] text-left border-collapse">
-                        <thead class="bg-gray-100 border-b">
-                            <tr><th class="p-2">Fecha/Ord</th><th class="p-2">Placa</th><th class="p-2">Detalle</th><th class="p-2 text-right">Total</th><th class="p-2 text-center">⚙️</th></tr>
+                    <table class="w-full text-left text-[11px]">
+                        <thead>
+                            <tr class="bg-gray-50 border-b">
+                                <th class="p-3">ORD/PLACA</th>
+                                <th class="p-3">DETALLE</th>
+                                <th class="p-3 text-right">TOTAL</th>
+                            </tr>
                         </thead>
-                        <tbody id="lista_ventas" class="divide-y italic"></tbody>
+                        <tbody id="lista-ventas" class="divide-y"></tbody>
                     </table>
                 </div>
             </div>
         </section>
 
-        <section id="sec-compras" class="hidden">
-            <div class="bg-white p-6 rounded-2xl shadow-lg border-t-4 border-emerald-600 mb-6">
-                <div class="grid grid-cols-2 gap-3 mb-4">
-                    <input type="date" id="c_fecha" class="p-3 border rounded-xl">
-                    <input type="text" id="c_factura" placeholder="No. Factura" class="p-3 border rounded-xl font-bold">
-                </div>
-                <select id="c_prod" class="w-full p-3 border rounded-xl font-bold bg-gray-50 mb-4">
-                    <option value="Súper">Súper</option>
-                    <option value="Regular">Regular</option>
-                    <option value="Diésel">Diésel</option>
-                </select>
-                <div class="grid grid-cols-2 gap-2 mb-4">
-                    <input type="number" id="c_cant" oninput="calcCostoCompra()" placeholder="Gls" class="p-3 border rounded-xl">
-                    <input type="number" id="c_costo_total" oninput="calcCostoCompra()" placeholder="Total $" class="p-3 border rounded-xl">
-                </div>
-                <div class="grid grid-cols-2 gap-2 mb-4">
-                    <div class="p-2 bg-gray-100 rounded text-center text-[10px]">Costo Unit: <span id="c_unitario_show" class="font-bold text-orange-600">$0.00</span></div>
-                    <input type="number" id="c_precio_venta" placeholder="Precio Venta" class="p-3 border rounded-xl bg-blue-50 font-bold">
-                </div>
-                <div class="flex space-x-2">
-                    <input type="hidden" id="c_edit_index" value="-1">
-                    <button onclick="cancelarCompra()" class="bg-slate-500 text-white px-4 py-3 rounded-xl font-bold text-xs">LIMPIAR</button>
-                    <button id="btn-comprar" onclick="registrarCompra()" class="flex-1 bg-emerald-600 text-white p-4 rounded-xl font-bold uppercase">Guardar Compra</button>
-                </div>
-            </div>
-            <div class="bg-white rounded-xl shadow overflow-hidden">
-                <tbody id="lista_compras"></tbody>
-            </div>
-        </section>
-
-        <section id="sec-contabilidad" class="hidden">
-             <div class="bg-purple-900 text-white p-4 rounded-2xl mb-4 flex gap-2">
-                <input type="date" id="cont_desde" class="p-2 rounded bg-purple-800 text-xs text-white">
-                <input type="date" id="cont_hasta" class="p-2 rounded bg-purple-800 text-xs text-white">
-                <button onclick="calcularContabilidad()" class="bg-yellow-500 text-black px-4 rounded font-bold text-xs uppercase">Filtrar</button>
-            </div>
-            <div class="bg-white p-4 rounded-xl shadow mb-4"><canvas id="chartVentas" style="max-height: 200px;"></canvas></div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="bg-white p-4 rounded-xl shadow border-t-4 border-blue-500">
-                    <h3 class="font-bold text-xs mb-2">POR PLACA</h3>
-                    <div class="max-h-40 overflow-y-auto"><table class="w-full text-[10px]"><tbody id="res_por_placa"></tbody></table></div>
-                </div>
-                <div class="bg-white p-4 rounded-xl shadow border-t-4 border-green-500">
-                    <h3 class="font-bold text-xs mb-2">POR ÁREA</h3>
-                    <div class="max-h-40 overflow-y-auto"><table class="w-full text-[10px]"><tbody id="res_por_area"></tbody></table></div>
+        <section id="sec-compras" class="tab-content hidden">
+            <div class="bg-emerald-50 p-5 rounded-2xl border-2 border-emerald-200 shadow-lg">
+                <h3 class="font-bold mb-4 text-emerald-800 uppercase text-xs tracking-widest">Entrada de Inventario</h3>
+                <div class="space-y-3">
+                    <input type="date" id="c-fecha" class="w-full p-3 border rounded-xl">
+                    <select id="c-producto" class="w-full p-3 border rounded-xl font-bold uppercase">
+                        <option value="Súper">Súper</option>
+                        <option value="Regular">Regular</option>
+                        <option value="Diésel">Diésel</option>
+                    </select>
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="number" id="c-cant" placeholder="Gls Comprados" class="p-3 border rounded-xl">
+                        <input type="number" id="c-costo" placeholder="Costo Total $" class="p-3 border rounded-xl">
+                    </div>
+                    <input type="number" id="c-venta" placeholder="Nuevo Precio Venta $" class="w-full p-3 border rounded-xl bg-blue-50 font-bold">
+                    <button onclick="guardarCompra()" class="w-full bg-emerald-600 text-white p-4 rounded-xl font-black uppercase">Registrar Compra</button>
                 </div>
             </div>
         </section>
 
-        <section id="sec-admin" class="hidden">
-            <div class="bg-white p-6 rounded-xl shadow">
-                <button onclick="borrarTodo()" class="w-full text-red-500 underline text-[10px] font-black uppercase">Borrar toda la base de datos local</button>
+        <section id="sec-reportes" class="tab-content hidden">
+            <div id="reporte-vacio" class="text-center p-10 text-gray-400 italic text-sm">Cargando datos...</div>
+            <div class="grid gap-4" id="reporte-container"></div>
+        </section>
+
+        <section id="sec-admin" class="tab-content hidden">
+            <div class="bg-white p-6 rounded-2xl shadow border border-red-100">
+                <h2 class="text-red-600 font-bold mb-4">Zona de Peligro</h2>
+                <button onclick="limpiarCache()" class="w-full bg-red-50 text-red-600 p-4 rounded-xl text-xs font-bold border border-red-200 uppercase">Borrar Datos Locales y Recargar</button>
             </div>
         </section>
     </main>
 
     <script>
+        // CONFIGURACIÓN CLOUD
+        //const URL_APP = "TU_URL_DE_GOOGLE_APPS_SCRIPT_AQUI"; // REEMPLAZAR
         const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbx9nwCa6lzlVMnE6J5KIoDDGZFxW-4fUy-sbjwcSNcQ0_XyUXCv7vx0ogxYsIHldor_Xw/exec";
-        
-        let app = JSON.parse(localStorage.getItem('fuelDB')) || {
-            clientes: [], vehiculos: [], ventas: [], compras: [],
+        // ESTADO DE LA APP
+        let DB = {
+            clientes: [],
+            vehiculos: [],
+            ventas: [],
+            compras: [],
             precios: { "Súper": 0, "Regular": 0, "Diésel": 0 }
         };
-        let myChart = null;
 
-        window.onload = () => {
-            actualizarTodo();
-            verTab('ventas');
+        // AL CARGAR
+        window.onload = async () => {
+            document.getElementById('v-fecha').valueAsDate = new Date();
+            cargarCache();
+            await sincronizar();
         };
 
-        // --- LIMPIEZA DE DATOS ---
-        function obtenerValor(obj, clave) {
+        // --- TRADUCTOR DE DATOS (IMPORTANTE PARA EL MOVIL) ---
+        function getVal(obj, key) {
             if (!obj) return "";
-            return obj[clave.toLowerCase()] || obj[clave.toUpperCase()] || "";
+            return obj[key.toLowerCase()] || obj[key.toUpperCase()] || obj[key] || "";
         }
 
-        function limpiarNum(v) {
-            if (v === null || v === undefined || v === "") return 0;
-            if (typeof v === "number") return v;
-            let res = String(v).replace(/[^0-9.]/g, '');
-            return parseFloat(res) || 0;
+        function forceNum(val) {
+            let n = parseFloat(val);
+            return isNaN(n) ? 0 : n;
         }
 
         // --- NAVEGACIÓN ---
-        function verTab(t) {
-            document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
-            document.getElementById('sec-' + t).classList.remove('hidden');
-            if (t === 'contabilidad') calcularContabilidad();
+        function verTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(s => s.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('border-yellow-400'));
+            
+            document.getElementById('sec-' + tabId).classList.remove('hidden');
+            document.getElementById('tab-' + tabId).classList.add('border-yellow-400');
+            
+            if(tabId === 'reportes') generarReporte();
         }
 
-        // --- SYNC ---
-        async function save(datosNube = null) {
-            localStorage.setItem('fuelDB', JSON.stringify(app));
-            actualizarUI();
-            renderVentas();
-            renderCompras();
+        // --- LÓGICA DE DATOS ---
+        async function sincronizar() {
+            document.getElementById('status-cloud').classList.replace('bg-green-500', 'bg-red-500');
+            try {
+                const response = await fetch(`${URL_APP}?action=readDB`);
+                const data = await response.json();
+                
+                if (data) {
+                    DB.clientes = data.clientes || [];
+                    DB.vehiculos = data.vehiculos || [];
+                    DB.ventas = data.ventas || [];
+                    DB.compras = data.compras || [];
+                    
+                    // Actualizar precios desde compras
+                    ["Súper", "Regular", "Diésel"].forEach(p => {
+                        const ult = DB.compras.reverse().find(c => getVal(c, 'producto') === p);
+                        if(ult) DB.precios[p] = forceNum(getVal(ult, 'precioVenta'));
+                    });
 
-            if (datosNube) {
-                try {
-                    const params = new URLSearchParams();
-                    for (let key in datosNube) params.append(key, datosNube[key]);
-                    fetch(WEB_APP_URL + "?" + params.toString(), { mode: 'no-cors' });
-                } catch (e) { console.error("Error nube", e); }
+                    document.getElementById('status-cloud').classList.replace('bg-red-500', 'bg-green-500');
+                    guardarCache();
+                    actualizarUI();
+                }
+            } catch (e) {
+                console.log("Offline mode");
             }
         }
 
-        async function actualizarTodo() {
-            try {
-                const res = await fetch(WEB_APP_URL + "?action=readDB");
-                const data = await res.json();
-                if (data) {
-                    app.clientes = data.clientes || [];
-                    app.vehiculos = data.vehiculos || [];
-                    app.ventas = data.ventas || [];
-                    app.compras = data.compras || [];
-                    
-                    // Extraer precios de la última compra de cada producto
-                    ["Súper", "Regular", "Diésel"].forEach(p => {
-                        const ultima = app.compras.filter(c => obtenerValor(c, 'producto') === p)[0];
-                        if (ultima) app.precios[p] = limpiarNum(obtenerValor(ultima, 'precioVenta'));
-                    });
-                }
-            } catch (e) { console.warn("Modo Offline"); }
-            
-            actualizarSelects();
-            actualizarUI();
-            renderVentas();
-            renderCompras();
-        }
-
-        // --- LOGICA UI ---
         function actualizarUI() {
-            const prods = ["Súper", "Regular", "Diésel"];
-            prods.forEach(p => {
-                const stockID = "stk_" + p.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-                
-                const totalComp = app.compras.reduce((acc, curr) => {
-                    return obtenerValor(curr, 'producto') === p ? acc + limpiarNum(obtenerValor(curr, 'cantidad')) : acc;
-                }, 0);
-                
-                const totalVent = app.ventas.reduce((acc, curr) => {
-                    return obtenerValor(curr, 'producto') === p ? acc + limpiarNum(obtenerValor(curr, 'cantidad')) : acc;
-                }, 0);
+            // Rellenar Clientes
+            let h = '<option value="">Seleccionar Cliente</option>';
+            DB.clientes.forEach(c => h += `<option value="${getVal(c, 'id')}">${getVal(c, 'nombre')}</option>`);
+            document.getElementById('v-cliente').innerHTML = h;
 
-                const el = document.getElementById(stockID);
-                if (el) el.innerText = (totalComp - totalVent).toFixed(1);
-            });
-        }
+            // Calcular Inventario
+            const inv = { "Súper": 0, "Regular": 0, "Diésel": 0 };
+            DB.compras.forEach(c => inv[getVal(c, 'producto')] += forceNum(getVal(c, 'cantidad')));
+            DB.ventas.forEach(v => inv[getVal(v, 'producto')] -= forceNum(getVal(v, 'cantidad')));
+            
+            document.getElementById('inv-super').innerText = inv["Súper"].toFixed(1);
+            document.getElementById('inv-regular').innerText = inv["Regular"].toFixed(1);
+            document.getElementById('inv-diesel').innerText = inv["Diésel"].toFixed(1);
 
-        function renderVentas() {
-            const tbody = document.getElementById('lista_ventas');
-            if (!tbody) return;
-            tbody.innerHTML = app.ventas.map((v, i) => {
-                const total = limpiarNum(obtenerValor(v, 'total'));
-                return `
+            // Render Ventas
+            const tbody = document.getElementById('lista-ventas');
+            tbody.innerHTML = DB.ventas.slice(0, 20).map(v => `
                 <tr class="border-b">
-                    <td class="p-2">${obtenerValor(v, 'fecha')}<br><b class="text-blue-600">${obtenerValor(v, 'orden')}</b></td>
-                    <td class="p-2 font-bold">${obtenerValor(v, 'placa')}</td>
-                    <td class="p-2">${obtenerValor(v, 'producto')}<br>${obtenerValor(v, 'cantidad')} Gls</td>
-                    <td class="p-2 text-right font-bold text-blue-700">$${total.toFixed(2)}</td>
-                    <td class="p-2 text-center">
-                        <button onclick="editarVenta(${i})" class="text-blue-500">✎</button>
-                    </td>
-                </tr>`;
-            }).join('');
-        }
-
-        function renderCompras() {
-            // Implementación similar si necesitas ver la lista de compras
+                    <td class="p-3 font-bold">#${getVal(v, 'orden')}<br><span class="text-blue-600">${getVal(v, 'placa')}</span></td>
+                    <td class="p-3">${getVal(v, 'producto')}<br><span class="text-gray-400">${getVal(v, 'cantidad')} Gls</span></td>
+                    <td class="p-3 text-right font-black text-blue-800">$${forceNum(getVal(v, 'total')).toFixed(2)}</td>
+                </tr>
+            `).join('');
+            document.getElementById('contador-ventas').innerText = `${DB.ventas.length} registros`;
         }
 
         // --- FORMULARIO VENTAS ---
-        function filtrarPlacas() {
-            const cid = document.getElementById('v_cliente').value;
-            const filtrados = app.vehiculos.filter(v => String(obtenerValor(v, 'cid')) === String(cid));
-            let h = '<option value="">-- Placa --</option>';
-            filtrados.forEach(v => { h += `<option value="${obtenerValor(v, 'placa')}">${obtenerValor(v, 'placa')}</option>`; });
-            document.getElementById('v_placa').innerHTML = h;
+        function cargarVehiculos() {
+            const cid = document.getElementById('v-cliente').value;
+            const filtrados = DB.vehiculos.filter(v => String(getVal(v, 'cid')) === String(cid));
+            let h = '<option value="">Placa</option>';
+            filtrados.forEach(v => h += `<option value="${getVal(v, 'placa')}">${getVal(v, 'placa')}</option>`);
+            document.getElementById('v-placa').innerHTML = h;
         }
 
-        function actualizarArea() {
-            const placa = document.getElementById('v_placa').value;
-            const v = app.vehiculos.find(x => obtenerValor(x, 'placa') === placa);
-            if (v) document.getElementById('v_area').value = obtenerValor(v, 'area');
+        function cargarArea() {
+            const placa = document.getElementById('v-placa').value;
+            const veh = DB.vehiculos.find(v => getVal(v, 'placa') === placa);
+            document.getElementById('v-area').value = veh ? getVal(veh, 'area') : "";
         }
 
-        function asignarPrecioAuto() {
-            const p = document.getElementById('v_prod').value;
-            document.getElementById('v_precio').value = app.precios[p] || 0;
+        function autoPrecio() {
+            const p = document.getElementById('v-producto').value;
+            document.getElementById('v-precio').value = DB.precios[p] || 0;
             calcVenta();
         }
 
         function calcVenta() {
-            const c = limpiarNum(document.getElementById('v_cant').value);
-            const p = limpiarNum(document.getElementById('v_precio').value);
-            const d = limpiarNum(document.getElementById('v_desc').value);
-            document.getElementById('v_total').innerText = ((c * p) - d).toFixed(2);
+            const c = forceNum(document.getElementById('v-cant').value);
+            const p = forceNum(document.getElementById('v-precio').value);
+            const d = forceNum(document.getElementById('v-desc').value);
+            document.getElementById('v-total').innerText = ((c * p) - d).toFixed(2);
         }
 
-        function realizarVenta() {
-            const prod = document.getElementById('v_prod').value;
-            const cant = limpiarNum(document.getElementById('v_cant').value);
-            const idx = parseInt(document.getElementById('v_edit_index').value);
-
-            const ven = {
+        async function guardarVenta() {
+            const venta = {
                 tipo: "VENTAS",
-                fecha: document.getElementById('v_fecha').value,
-                orden: document.getElementById('v_orden').value,
-                cliente: document.getElementById('v_cliente').selectedOptions[0].text,
-                placa: document.getElementById('v_placa').value,
-                area: document.getElementById('v_area').value,
-                producto: prod,
-                cantidad: cant,
-                precio: limpiarNum(document.getElementById('v_precio').value),
-                descuento: limpiarNum(document.getElementById('v_desc').value),
-                total: limpiarNum(document.getElementById('v_total').innerText),
-                clienteId: document.getElementById('v_cliente').value
+                fecha: document.getElementById('v-fecha').value,
+                orden: document.getElementById('v-orden').value,
+                placa: document.getElementById('v-placa').value,
+                producto: document.getElementById('v-producto').value,
+                cantidad: forceNum(document.getElementById('v-cant').value),
+                precio: forceNum(document.getElementById('v-precio').value),
+                descuento: forceNum(document.getElementById('v-desc').value),
+                total: forceNum(document.getElementById('v-total').innerText),
+                cliente: document.getElementById('v-cliente').selectedOptions[0].text
             };
 
-            if (idx > -1) app.ventas[idx] = ven;
-            else app.ventas.unshift(ven);
+            if (!venta.placa || venta.cantidad <= 0) return alert("Completa los datos");
 
-            save(ven);
-            cancelarVenta();
+            // Guardar local
+            DB.ventas.unshift(venta);
+            guardarCache();
+            actualizarUI();
+
+            // Enviar Nube
+            const params = new URLSearchParams(venta);
+            fetch(`${URL_APP}?${params.toString()}`, { mode: 'no-cors' });
+            
+            // Limpiar
+            document.getElementById('v-cant').value = "";
+            document.getElementById('v-orden').value = "";
+            alert("✅ Venta Guardada");
         }
 
-        function cancelarVenta() {
-            document.getElementById('v_edit_index').value = "-1";
-            document.getElementById('v_cant').value = "";
-            document.getElementById('v_total').innerText = "0.00";
-            document.getElementById('btn-registrar').innerText = "Guardar";
+        // --- CACHE ---
+        function guardarCache() { localStorage.setItem('fuel_db_v8', JSON.stringify(DB)); }
+        function cargarCache() {
+            const data = localStorage.getItem('fuel_db_v8');
+            if (data) { DB = JSON.parse(data); actualizarUI(); }
         }
+        function limpiarCache() { if(confirm("¿Borrar todo?")) { localStorage.clear(); location.reload(); } }
 
-        function editarVenta(i) {
-            const v = app.ventas[i];
-            document.getElementById('v_fecha').value = obtenerValor(v, 'fecha');
-            document.getElementById('v_orden').value = obtenerValor(v, 'orden');
-            document.getElementById('v_cliente').value = obtenerValor(v, 'clienteId');
-            filtrarPlacas();
-            document.getElementById('v_placa').value = obtenerValor(v, 'placa');
-            document.getElementById('v_area').value = obtenerValor(v, 'area');
-            document.getElementById('v_prod').value = obtenerValor(v, 'producto');
-            document.getElementById('v_cant').value = obtenerValor(v, 'cantidad');
-            document.getElementById('v_precio').value = obtenerValor(v, 'precio');
-            document.getElementById('v_desc').value = obtenerValor(v, 'descuento');
-            calcVenta();
-            document.getElementById('v_edit_index').value = i;
-            document.getElementById('btn-registrar').innerText = "Actualizar";
-            verTab('ventas');
-        }
-
-        function actualizarSelects() {
-            let h = '<option value="">-- Cliente --</option>';
-            app.clientes.forEach(c => { h += `<option value="${obtenerValor(c, 'id')}">${obtenerValor(c, 'nombre')}</option>`; });
-            document.getElementById('v_cliente').innerHTML = h;
-        }
-
-        function calcularContabilidad() {
-            const d = document.getElementById('cont_desde').value;
-            const h = document.getElementById('cont_hasta').value;
-            let f = app.ventas;
-            if (d) f = f.filter(v => obtenerValor(v, 'fecha') >= d);
-            if (h) f = f.filter(v => obtenerValor(v, 'fecha') <= h);
-
-            const agP = {};
-            f.forEach(v => {
-                const p = (obtenerValor(v, 'placa') || "S/P").toUpperCase();
-                if (!agP[p]) agP[p] = { g: 0, t: 0 };
-                agP[p].g += limpiarNum(obtenerValor(v, 'cantidad'));
-                agP[p].t += limpiarNum(obtenerValor(v, 'total'));
+        // --- REPORTES ---
+        function generarReporte() {
+            const res = {};
+            DB.ventas.forEach(v => {
+                const area = getVal(v, 'area') || "Sin Área";
+                if(!res[area]) res[area] = 0;
+                res[area] += forceNum(getVal(v, 'total'));
             });
-            document.getElementById('res_por_placa').innerHTML = Object.entries(agP).map(([p, d]) => `<tr><td class="p-1">${p}</td><td class="text-center font-bold">${d.g.toFixed(1)}</td><td class="text-right">$${d.t.toFixed(2)}</td></tr>`).join('');
-        }
 
-        function borrarTodo() { if (confirm("¿Borrar TODO?")) { localStorage.clear(); location.reload(); } }
+            document.getElementById('reporte-container').innerHTML = Object.entries(res).map(([a, t]) => `
+                <div class="bg-white p-4 rounded-xl flex justify-between items-center shadow-sm">
+                    <span class="font-bold text-xs uppercase">${a}</span>
+                    <span class="font-black text-blue-600">$${t.toFixed(2)}</span>
+                </div>
+            `).join('');
+            document.getElementById('reporte-vacio').classList.add('hidden');
+        }
     </script>
 </body>
 </html>
