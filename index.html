@@ -325,19 +325,19 @@
                 const totalNum = parseFloat(rawTotal) || 0;
 
                 return `
-                <tr class="border-b hover:bg-gray-50">
-                    <td class="p-2">${fecha}</td>
-                    <td class="p-2 text-[9px] font-mono">${factura}</td>
-                    <td class="p-2 font-bold text-emerald-700">${producto}</td>
-                    <td class="p-2 font-semibold">${cantidad} <small>Gls</small></td>
-                    <td class="p-2 text-right font-black text-slate-900">$${totalNum.toFixed(2)}</td>
-                    <td class="p-2 text-center">
-                        <div class="flex justify-center gap-2">
-                            <button onclick="editarCompra(${i})" class="text-blue-500 bg-blue-50 p-1 rounded">✎</button>
-                            <button onclick="eliminarCompra(${i})" class="text-red-500 bg-red-50 p-1 rounded">🗑</button>
-                        </div>
-                    </td>
-                </tr>`;
+            <tr class="border-b hover:bg-gray-50">
+                <td class="p-2">${fecha}</td>
+                <td class="p-2 text-[9px] font-mono">${factura}</td>
+                <td class="p-2 font-bold text-emerald-700">${producto}</td>
+                <td class="p-2 font-semibold">${cantidad} <small>Gls</small></td>
+                <td class="p-2 text-right font-black text-slate-900">$${totalNum.toFixed(2)}</td>
+                <td class="p-2 text-center">
+                    <div class="flex justify-center gap-2">
+                        <button onclick="editarCompra(${i})" class="text-blue-500 bg-blue-50 p-1 rounded">✎</button>
+                        <button onclick="eliminarCompra(${i})" class="text-red-500 bg-red-50 p-1 rounded">🗑</button>
+                    </div>
+                </td>
+            </tr>`;
             }).join('');
         }
 
@@ -361,8 +361,8 @@
             document.getElementById('btn-comprar').innerText = "Guardar Compra";
             ["c_cant", "c_costo_total", "c_factura", "c_precio_venta"].forEach(id => document.getElementById(id).value = "");
         }
-
-
+       
+        
 
         // --- VENTAS ---
         function asignarPrecioAuto() {
@@ -466,16 +466,16 @@
                 const totalNum = parseFloat(totalVal) || 0;
 
                 return `
-                <tr class="border-b">
-                    <td class="p-2">${fecha}<br><span class="text-blue-600 font-bold">${orden}</span></td>
-                    <td class="p-2 font-bold">${placa}</td>
-                    <td class="p-2">${prod}<br>${cant} Gls</td>
-                    <td class="p-2 text-right font-bold">$${totalNum.toFixed(2)}</td>
-                    <td class="p-2 text-center">
-                        <button onclick="editarVenta(${i})" class="text-blue-500 mr-1">✎</button>
-                        <button onclick="eliminarVenta(${i})" class="text-red-500">🗑</button>
-                    </td>
-                </tr>`;
+            <tr class="border-b">
+                <td class="p-2">${fecha}<br><span class="text-blue-600 font-bold">${orden}</span></td>
+                <td class="p-2 font-bold">${placa}</td>
+                <td class="p-2">${prod}<br>${cant} Gls</td>
+                <td class="p-2 text-right font-bold">$${totalNum.toFixed(2)}</td>
+                <td class="p-2 text-center">
+                    <button onclick="editarVenta(${i})" class="text-blue-500 mr-1">✎</button>
+                    <button onclick="eliminarVenta(${i})" class="text-red-500">🗑</button>
+                </td>
+            </tr>`;
             }).join('');
         }
 
@@ -508,11 +508,11 @@
             });
 
             document.getElementById('res_por_placa').innerHTML = Object.entries(agP).map(([p, d]) => `
-            <tr class="border-b">
-                <td class="p-1">${p}</td>
-                <td class="p-1 text-center font-bold">${d.g.toFixed(1)}</td>
-                <td class="p-1 text-right font-bold text-blue-600">$${d.t.toFixed(2)}</td>
-            </tr>`).join('');
+        <tr class="border-b">
+            <td class="p-1">${p}</td>
+            <td class="p-1 text-center font-bold">${d.g.toFixed(1)}</td>
+            <td class="p-1 text-right font-bold text-blue-600">$${d.t.toFixed(2)}</td>
+        </tr>`).join('');
 
             // 3. Agrupar por Área
             const agA = {};
@@ -529,43 +529,43 @@
             });
 
             document.getElementById('res_por_area').innerHTML = Object.entries(agA).map(([a, d]) => `
-            <tr class="border-b">
-                <td class="p-1">${a}</td>
-                <td class="p-1 text-center font-bold">${d.g.toFixed(1)}</td>
-                <td class="p-1 text-right font-bold text-emerald-600">$${d.t.toFixed(2)}</td>
-            </tr>`).join('');
+        <tr class="border-b">
+            <td class="p-1">${a}</td>
+            <td class="p-1 text-center font-bold">${d.g.toFixed(1)}</td>
+            <td class="p-1 text-right font-bold text-emerald-600">$${d.t.toFixed(2)}</td>
+        </tr>`).join('');
 
             updateChart(f);
         }
 
-        document.getElementById('res_por_placa').innerHTML = Object.entries(agP).map(([p, d]) => `
-            <tr class="border-b">
-                <td class="p-1">${p}</td>
-                <td class="p-1 text-center font-bold">${d.g.toFixed(1)}</td>
-                <td class="p-1 text-right font-bold text-blue-600">$${d.t.toFixed(2)}</td>
-            </tr>`).join('');
+            document.getElementById('res_por_placa').innerHTML = Object.entries(agP).map(([p, d]) => `
+        <tr class="border-b">
+            <td class="p-1">${p}</td>
+            <td class="p-1 text-center font-bold">${d.g.toFixed(1)}</td>
+            <td class="p-1 text-right font-bold text-blue-600">$${d.t.toFixed(2)}</td>
+        </tr>`).join('');
 
-        // Agrupar por Área
-        const agA = {};
-        f.forEach(v => {
-            const area = (v.area || v.AREA || "SIN ÁREA").toUpperCase();
-            const cant = parseFloat(v.cantidad || v.CANTIDAD || 0);
-            const total = parseFloat(v.total || v.TOTAL || 0);
+            // Agrupar por Área
+            const agA = {};
+            f.forEach(v => {
+                const area = (v.area || v.AREA || "SIN ÁREA").toUpperCase();
+                const cant = parseFloat(v.cantidad || v.CANTIDAD || 0);
+                const total = parseFloat(v.total || v.TOTAL || 0);
 
-            if (!agA[area]) agA[area] = { g: 0, t: 0 };
-            agA[area].g += cant;
-            agA[area].t += total;
-        });
+                if (!agA[area]) agA[area] = { g: 0, t: 0 };
+                agA[area].g += cant;
+                agA[area].t += total;
+            });
 
-        document.getElementById('res_por_area').innerHTML = Object.entries(agA).map(([a, d]) => `
-            <tr class="border-b">
-                <td class="p-1">${a}</td>
-                <td class="p-1 text-center font-bold">${d.g.toFixed(1)}</td>
-                <td class="p-1 text-right font-bold text-emerald-600">$${d.t.toFixed(2)}</td>
-            </tr>`).join('');
+            document.getElementById('res_por_area').innerHTML = Object.entries(agA).map(([a, d]) => `
+        <tr class="border-b">
+            <td class="p-1">${a}</td>
+            <td class="p-1 text-center font-bold">${d.g.toFixed(1)}</td>
+            <td class="p-1 text-right font-bold text-emerald-600">$${d.t.toFixed(2)}</td>
+        </tr>`).join('');
 
-        updateChart(f);
-
+            updateChart(f);
+        
 
         function updateChart(data) {
             const ctx = document.getElementById('chartVentas').getContext('2d');
@@ -676,7 +676,7 @@
         function restaurarBackup(ev) { const reader = new FileReader(); reader.onload = e => { app = JSON.parse(e.target.result); save(); location.reload(); }; reader.readAsText(ev.target.files[0]); }
         function borrarTodo() { if (confirm("¿BORRAR TODO?")) { localStorage.clear(); location.reload(); } }
 
-
+       
         // --- LIMPIADOR UNIVERSAL DE NÚMEROS ---
         function limpiarNum(valor) {
             if (valor === null || valor === undefined || valor === "") return 0;
@@ -728,12 +728,11 @@
             }
         }
 
-        window.onload = function () {
-            document.getElementById('v_fecha').valueAsDate = new Date();
-            document.getElementById('c_fecha').valueAsDate = new Date();
-            actualizarTodo();
+              window.onload = function () {
+              document.getElementById('v_fecha').valueAsDate = new Date();
+              document.getElementById('c_fecha').valueAsDate = new Date();
+              actualizarTodo();
         };
     </script>
 </body>
 </html>
-
