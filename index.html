@@ -481,20 +481,54 @@ function renderCompras() {
         function exportarComprasExcel() { const ws = XLSX.utils.json_to_sheet(app.compras); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Compras"); XLSX.writeFile(wb, "Historial_Compras.xlsx"); }
         function exportarBIExcel(t) { const data = []; document.querySelectorAll(`#res_por_${t} tr`).forEach(tr => { const td = tr.querySelectorAll("td"); data.push({ [t.toUpperCase()]: td[0].innerText, GLS: td[1].innerText, TOTAL: td[2].innerText }); }); const ws = XLSX.utils.json_to_sheet(data); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, t); XLSX.writeFile(wb, `Reporte_${t}.xlsx`); }
 
-        function calcularContabilidad() { 
-            const d = document.getElementById('cont_desde').value, h = document.getElementById('cont_hasta').value; 
-            let f = app.ventas; 
-            if (d) f = f.filter(v => v.fecha >= d); 
-            if (h) f = f.filter(v => v.fecha <= h); 
-            
-            const agP = {}; f.forEach(v => { if (!agP[v.placa]) agP[v.placa] = { g: 0, t: 0 }; agP[v.placa].g += parseFloat(v.cantidad || 0); agP[v.placa].t += parseFloat(v.total || 0); }); 
-            document.getElementById('res_por_placa').innerHTML = Object.entries(agP).map(([p, d]) => `<tr><td class="p-1">${p}</td><td class="p-1 text-center font-bold">${d.g.toFixed(1)}</td><td class="p-1 text-right font-bold">$${d.t.toFixed(2)}</td></tr>`).join(''); 
-            
-            const agA = {}; f.forEach(v => { const a = v.area || "S/A"; if (!agA[a]) agA[a] = { g: 0, t: 0 }; agA[a].g += parseFloat(v.cantidad || 0); agA[a].t += parseFloat(v.total || 0); }); 
-            document.getElementById('res_por_area').innerHTML = Object.entries(agA).map(([a, d]) => `<tr><td class="p-1">${a}</td><td class="p-1 text-center font-bold">${d.g.toFixed(1)}</td><td class="p-1 text-right font-bold">$${d.t.toFixed(2)}</td></tr>`).join(''); 
-            updateChart(f); 
-        }
+       function calcularContabilidad() { 
+    const d = document.getElementById('cont_desde').value;
+    const h = document.getElementById('cont_hasta').value; 
+    let f = app.ventas; 
+    
+    if (d) f = f.filter(v => (v.fecha || v.FECHA) >= d); 
+    if (h) f = f.filter(v => (v.fecha || v.FECHA) <= h); 
+    
+    // Agrupar por Placa
+    const agP = {}; 
+    f.forEach(v => {
+        const placa = (v.placa || v.PLACA || "S/P").toUpperCase();
+        const cant = parseFloat(v.cantidad || v.CANTIDAD || 0);
+        const total = parseFloat(v.total || v.TOTAL || 0);
+        
+        if (!agP[placa]) agP[placa] = { g: 0, t: 0 };
+        agP[placa].g += cant;
+        agP[placa].t += total;
+    }); 
+    
+    document.getElementById('res_por_placa').innerHTML = Object.entries(agP).map(([p, d]) => `
+        <tr class="border-b">
+            <td class="p-1">${p}</td>
+            <td class="p-1 text-center font-bold">${d.g.toFixed(1)}</td>
+            <td class="p-1 text-right font-bold text-blue-600">$${d.t.toFixed(2)}</td>
+        </tr>`).join(''); 
+    
+    // Agrupar por Área
+    const agA = {}; 
+    f.forEach(v => { 
+        const area = (v.area || v.AREA || "SIN ÁREA").toUpperCase();
+        const cant = parseFloat(v.cantidad || v.CANTIDAD || 0);
+        const total = parseFloat(v.total || v.TOTAL || 0);
 
+        if (!agA[area]) agA[area] = { g: 0, t: 0 }; 
+        agA[area].g += cant; 
+        agA[area].t += total; 
+    }); 
+    
+    document.getElementById('res_por_area').innerHTML = Object.entries(agA).map(([a, d]) => `
+        <tr class="border-b">
+            <td class="p-1">${a}</td>
+            <td class="p-1 text-center font-bold">${d.g.toFixed(1)}</td>
+            <td class="p-1 text-right font-bold text-emerald-600">$${d.t.toFixed(2)}</td>
+        </tr>`).join(''); 
+        
+    updateChart(f); 
+}
         function updateChart(data) { 
             const ctx = document.getElementById('chartVentas').getContext('2d'); 
             const ag = {}; data.forEach(v => ag[v.fecha] = (ag[v.fecha] || 0) + parseFloat(v.total || 0)); 
@@ -613,53 +647,37 @@ function actualizarArea() {
     });
 }
 
- //function actualizarUI() {
-     //const productos = ["Súper", "Regular", "Diésel"];
 
-     //productos.forEach(prod => {
-         // Sumar compras (buscando cantidad o CANTIDAD)
-        // const c = app.compras
-             //.filter(i => (i.producto || i.PRODUCTO || "").toLowerCase() === prod.toLowerCase())
-             //.reduce((s, i) => s + parseFloat(i.cantidad || i.CANTIDAD || 0), 0);
-
-         // Sumar ventas (buscando cantidad o CANTIDAD)
-         //const v = app.ventas
-            // .filter(i => (i.producto || i.PRODUCTO || "").toLowerCase() === prod.toLowerCase())
-             //.reduce((s, i) => s + parseFloat(i.cantidad || i.CANTIDAD || 0), 0);
-
-         //const id = "stk_" + prod.toLowerCase().replace("ú", "u");
-        // const el = document.getElementById(id);
-        // if (el) el.innerText = (c - v).toFixed(1);
-     //});
-// }   
         function descargarBackup() { const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(app)); const dl = document.createElement('a'); dl.setAttribute("href", dataStr); dl.setAttribute("download", "BACKUP_FUEL.json"); dl.click(); }
         function restaurarBackup(ev) { const reader = new FileReader(); reader.onload = e => { app = JSON.parse(e.target.result); save(); location.reload(); }; reader.readAsText(ev.target.files[0]); }
         function borrarTodo() { if (confirm("¿BORRAR TODO?")) { localStorage.clear(); location.reload(); } }
 
-        async function actualizarTodo() {
+       async function actualizarTodo() {
+    actualizarUI();
+    renderVentas();
+    renderCompras(); // <--- Asegúrate de que esta línea esté aquí
+    actualizarSelects();
+    
+    try {
+        const res = await fetch(WEB_APP_URL + "?action=readDB");
+        const data = await res.json();
+        if (data) {
+            // Mapeo flexible para asegurar que los datos entren bien
+            app.clientes = data.clientes || [];
+            app.vehiculos = data.vehiculos || [];
+            app.ventas = data.ventas || [];
+            app.compras = data.compras || []; // <--- Verifica que el Excel envíe "compras"
+            
+            localStorage.setItem('fuelDB', JSON.stringify(app));
+            
+            // Refrescar todo después de bajar de la nube
             actualizarUI();
             renderVentas();
             renderCompras();
             actualizarSelects();
-            
-            console.log("🔄 Sincronizando datos de Nube...");
-            try {
-                const res = await fetch(WEB_APP_URL + "?action=readDB");
-                const data = await res.json();
-                if (data) {
-                    app.clientes = data.clientes || app.clientes;
-                    app.vehiculos = data.vehiculos || app.vehiculos;
-                    app.ventas = data.ventas || app.ventas;
-                    app.compras = data.compras || app.compras;
-                    localStorage.setItem('fuelDB', JSON.stringify(app));
-                    actualizarUI();
-                    renderVentas();
-                    renderCompras();
-                    actualizarSelects();
-                    console.log("✅ Sincronización completa");
-                }
-            } catch (e) { console.warn("⚠️ Modo offline o error de red."); }
         }
+    } catch (e) { console.warn("Modo offline o error de red."); }
+}
 
         window.onload = function() {
             document.getElementById('v_fecha').valueAsDate = new Date();
@@ -669,19 +687,3 @@ function actualizarArea() {
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
