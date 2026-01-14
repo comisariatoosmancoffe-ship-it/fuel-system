@@ -155,11 +155,7 @@
 
         <section id="sec-admin" class="hidden">
             <div class="bg-white p-6 rounded-xl shadow">
-                <div class="flex gap-2 mb-6">
-                    <button onclick="descargarBackup()" class="flex-1 bg-blue-600 text-white p-3 rounded font-bold text-xs">DESCARGAR BACKUP</button>
-                    <input type="file" id="fIn" class="hidden" onchange="restaurarBackup(event)">
-                    <button onclick="document.getElementById('fIn').click()" class="flex-1 bg-slate-200 p-3 rounded font-bold text-xs">RESTAURAR</button>
-                </div>
+                <div class="flex gap-2 mb-6"><button onclick="descargarBackup()" class="flex-1 bg-blue-600 text-white p-3 rounded font-bold text-xs">DESCARGAR BACKUP</button><input type="file" id="fIn" class="hidden" onchange="restaurarBackup(event)"><button onclick="document.getElementById('fIn').click()" class="flex-1 bg-slate-200 p-3 rounded font-bold text-xs">RESTAURAR</button></div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="border p-4 rounded"><h4 class="font-bold mb-2 uppercase text-xs">Nueva Empresa</h4><input type="text" id="adm_c_nom" class="w-full p-2 border mb-2 text-sm" placeholder="Nombre Empresa"><button onclick="addCliente()" class="w-full bg-black text-white p-2 rounded text-xs">AÑADIR</button></div>
                     <div class="border p-4 rounded"><h4 class="font-bold mb-2 uppercase text-xs">Vincular Placa</h4><select id="adm_v_cli" class="w-full p-2 border mb-2 text-sm"></select><input type="text" id="adm_v_pla" class="w-full p-2 border mb-2 text-sm uppercase" placeholder="Placa"><input type="text" id="adm_v_area" class="w-full p-2 border mb-2 text-sm" placeholder="Área"><button onclick="addVehiculo()" class="w-full bg-yellow-600 text-white p-2 rounded text-xs">VINCULAR</button></div>
@@ -171,7 +167,6 @@
 
     <script>
         const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbx9nwCa6lzlVMnE6J5KIoDDGZFxW-4fUy-sbjwcSNcQ0_XyUXCv7vx0ogxYsIHldor_Xw/exec";
-        
         let app = JSON.parse(localStorage.getItem('fuelDB')) || {
             clientes: [], vehiculos: [], ventas: [], compras: [],
             stock: { "Súper": 0, "Regular": 0, "Diésel": 0 },
@@ -179,279 +174,261 @@
         };
         let myChart = null;
 
-        // --- INICIO ---
-        window.onload = () => {
-            actualizarTodo();
-            verTab('ventas');
-        };
+        // --- FUNCIÓN DE GUARDADO ULTRA-RESISTENTE PARA MÓVIL ---
+        async function save(datosNube = null) {
+            // 1. Guardar localmente primero (siempre funciona)
+            localStorage.setItem('fuelDB', JSON.stringify(app));
 
-        // --- FUNCIÓN LIMPIADORA DE NÚMEROS (CRUCIAL) ---
-        function limpiarNum(v) {
-            if (v === null || v === undefined || v === "") return 0;
-            if (typeof v === "number") return v;
-            let res = String(v).replace(/[^0-9.]/g, '');
-            return parseFloat(res) || 0;
+            // Actualizar la vista de inmediato
+            actualizarUI();
+            renderVentas();
+            renderCompras();
+
+            // 2. Si hay datos para la nube, usar un método que el móvil no bloquee
+            if (datosNube) {
+                try {
+                    // Limpiamos los datos para que no lleven símbolos raros
+                    const params = new URLSearchParams();
+                    for (let key in datosNube) {
+                        params.append(key, datosNube[key] === undefined ? "" : datosNube[key]);
+                    }
+
+                    // Usamos 'fetch' con modo 'no-cors' para que el móvil no lo bloquee por seguridad
+                    fetch(WEB_APP_URL + "?" + params.toString(), {
+                        method: 'GET',
+                        mode: 'no-cors',
+                        cache: 'no-cache'
+                    }).then(() => {
+                        console.log("✅ Enviado a la nube exitosamente");
+                    }).catch(err => {
+                        console.error("❌ Error de envío, pero guardado en móvil local");
+                    });
+
+                } catch (e) {
+                    console.error("Error crítico en envío:", e);
+                }
+            }
         }
 
-        // --- NAVEGACIÓN ---
+        // --- VINCULACIÓN SIMPLIFICADA (PARA QUE APAREZCA LA PLACA SÍ O SÍ) ---
+        function filtrarPlacas() {
+            const selectorCliente = document.getElementById('v_cliente');
+            const clienteID = selectorCliente.value;
+
+            // Si no hay cliente, limpiar placas y salir
+            if (!clienteID) {
+                document.getElementById('v_placa').innerHTML = '<option value="">-- Placa --</option>';
+                return;
+            }
+
+            // Buscamos los vehículos (usando == para que compare número con texto sin problemas)
+            const filtrados = app.vehiculos.filter(v => {
+                let v_cid = v.cid || v.CID || "";
+                return String(v_cid).trim() == String(clienteID).trim();
+            });
+
+            let html = '<option value="">-- Placa (' + filtrados.length + ') --</option>';
+            filtrados.forEach(v => {
+                let p = (v.placa || v.PLACA || "S/P").toUpperCase();
+                html += `<option value="${p}">${p}</option>`;
+            });
+
+            document.getElementById('v_placa').innerHTML = html;
+        }
+
+        // --- ACTUALIZAR ÁREA (CORREGIDO PARA MÓVIL) ---
+        function actualizarArea() {
+            const placaSeleccionada = document.getElementById('v_placa').value;
+            if (!placaSeleccionada) return;
+
+            const veh = app.vehiculos.find(v => {
+                let p = v.placa || v.PLACA || "";
+                return String(p).trim().toUpperCase() === String(placaSeleccionada).trim().toUpperCase();
+            });
+
+            if (veh) {
+                document.getElementById('v_area').value = veh.area || veh.AREA || "";
+            }
+        }
+
         function verTab(t) {
             document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
             document.getElementById('sec-' + t).classList.remove('hidden');
             if (t === 'contabilidad') calcularContabilidad();
-            if (t === 'admin') actualizarSelectAdmin();
         }
 
-        // --- SYNC ---
-        async function save(datosNube = null) {
-            localStorage.setItem('fuelDB', JSON.stringify(app));
-            actualizarUI();
-            renderVentas();
-            renderCompras();
-
-            if (datosNube) {
-                try {
-                    const params = new URLSearchParams();
-                    for (let key in datosNube) params.append(key, datosNube[key]);
-                    fetch(WEB_APP_URL + "?" + params.toString(), { mode: 'no-cors' });
-                } catch (e) { console.error("Error nube", e); }
-            }
+        // --- COMPRAS ---
+        function calcCostoCompra() {
+            const c = parseFloat(document.getElementById('c_cant').value) || 0;
+            const t = parseFloat(document.getElementById('c_costo_total').value) || 0;
+            document.getElementById('c_unitario_show').innerText = "$" + (c > 0 ? (t / c).toFixed(2) : "0.00");
         }
 
-        async function actualizarTodo() {
-            try {
-                const res = await fetch(WEB_APP_URL + "?action=readDB");
-                const data = await res.json();
-                if (data) {
-                    app.clientes = data.clientes || [];
-                    app.vehiculos = data.vehiculos || [];
-                    app.ventas = data.ventas || [];
-                    app.compras = data.compras || [];
-                    save();
-                }
-            } catch (e) { console.warn("Modo Offline"); }
-            actualizarSelects();
-            actualizarUI();
-            renderVentas();
-            renderCompras();
+        function registrarCompra() {
+            const f = document.getElementById('c_fecha').value;
+            const prod = document.getElementById('c_prod').value;
+            const cant = parseFloat(document.getElementById('c_cant').value) || 0;
+            const totalC = parseFloat(document.getElementById('c_costo_total').value) || 0;
+            const idx = parseInt(document.getElementById('c_edit_index').value);
+            if (!f || cant <= 0) return alert("Faltan datos");
+
+            const obj = { tipo: "COMPRA", fecha: f, factura: document.getElementById('c_factura').value, producto: prod, cantidad: cant, costoTotal: totalC, unitario: totalC / cant, precioVenta: parseFloat(document.getElementById('c_precio_venta').value) || 0 };
+
+            if (idx > -1) { app.compras[idx] = obj; } else { app.compras.unshift(obj); }
+            app.precios[prod] = obj.precioVenta;
+            save(obj);
+            cancelarCompra();
+        }
+
+        function editarCompra(i) {
+            const c = app.compras[i];
+            document.getElementById('c_fecha').value = c.fecha;
+            document.getElementById('c_factura').value = c.factura;
+            document.getElementById('c_prod').value = c.producto;
+            document.getElementById('c_cant').value = c.cantidad;
+            document.getElementById('c_costo_total').value = c.costoTotal;
+            document.getElementById('c_precio_venta').value = c.precioVenta;
+            document.getElementById('c_edit_index').value = i;
+            document.getElementById('btn-comprar').innerText = "Actualizar";
+            verTab('compras');
+        }
+
+        function eliminarCompra(i) { if (confirm("¿Eliminar abastecimiento?")) { app.compras.splice(i, 1); save(); } }
+
+        function cancelarCompra() {
+            document.getElementById('c_edit_index').value = "-1";
+            document.getElementById('btn-comprar').innerText = "Guardar Compra";
+            ["c_cant", "c_costo_total", "c_factura", "c_precio_venta"].forEach(id => document.getElementById(id).value = "");
+        }
+
+        function renderCompras() {
+            document.getElementById('lista_compras').innerHTML = app.compras.map((c, i) => `
+                    <tr class="border-b">
+                        <td class="p-2">${c.fecha || ''}</td>
+                        <td class="p-2 text-[9px]">${c.factura || ''}</td>
+                        <td class="p-2 font-bold">${c.producto || ''}</td>
+                        <td class="p-2">${c.cantidad || 0}</td>
+                        <td class="p-2 text-right font-bold">$${parseFloat(c.costoTotal || 0).toFixed(2)}</td>
+                        <td class="p-2 text-center">
+                            <button onclick="editarCompra(${i})" class="text-blue-500 mr-2">✎</button>
+                            <button onclick="eliminarCompra(${i})" class="text-red-500">🗑</button>
+                        </td>
+                    </tr>`).join('');
         }
 
         // --- VENTAS ---
-        function filtrarPlacas() {
-            const cid = document.getElementById('v_cliente').value;
-            const filtrados = app.vehiculos.filter(v => String(v.cid || v.CID) === String(cid));
-            let h = '<option value="">-- Placa --</option>';
-            filtrados.forEach(v => { h += `<option value="${v.placa || v.PLACA}">${v.placa || v.PLACA}</option>`; });
-            document.getElementById('v_placa').innerHTML = h;
-        }
-
-        function actualizarArea() {
-            const p = document.getElementById('v_placa').value;
-            const v = app.vehiculos.find(x => (x.placa || x.PLACA) === p);
-            if (v) document.getElementById('v_area').value = v.area || v.AREA || "";
-        }
-
         function asignarPrecioAuto() {
             const p = document.getElementById('v_prod').value;
-            document.getElementById('v_precio').value = app.precios[p] || 0;
+            document.getElementById('v_precio').value = (p === "ANULADA") ? 0 : (app.precios[p] || 0);
             calcVenta();
         }
 
         function calcVenta() {
-            const c = limpiarNum(document.getElementById('v_cant').value);
-            const p = limpiarNum(document.getElementById('v_precio').value);
-            const d = limpiarNum(document.getElementById('v_desc').value);
-            document.getElementById('v_total').innerText = ( (c * p) - d ).toFixed(2);
+            const c = parseFloat(document.getElementById('v_cant').value) || 0;
+            const p = parseFloat(document.getElementById('v_precio').value) || 0;
+            const d = parseFloat(document.getElementById('v_desc').value) || 0;
+            document.getElementById('v_total').innerText = ((c * p) - d).toFixed(2);
         }
 
         function realizarVenta() {
             const prod = document.getElementById('v_prod').value;
-            const cant = limpiarNum(document.getElementById('v_cant').value);
+            const cant = parseFloat(document.getElementById('v_cant').value) || 0;
             const cid = document.getElementById('v_cliente').value;
             const placa = document.getElementById('v_placa').value;
             const idx = parseInt(document.getElementById('v_edit_index').value);
 
-            if (!prod || !placa || !cid || cant <= 0) return alert("Faltan datos");
+            if (!prod || !placa || !cid) return alert("Faltan datos obligatorios");
 
-            const cli = app.clientes.find(c => String(c.id || c.ID) === String(cid));
+            const clientObj = app.clientes.find(c => String(c.id || c.ID) === String(cid));
+
             const ven = {
-                tipo: "VENTAS",
+                tipo: "VENTA",
                 fecha: document.getElementById('v_fecha').value,
                 orden: document.getElementById('v_orden').value,
-                cliente: cli ? (cli.nombre || cli.NOMBRE) : "Desconocido",
-                placa,
+                cliente: clientObj.nombre || clientObj.NOMBRE,
+                placa: placa,
                 area: document.getElementById('v_area').value,
-                producto: prod,
+                producto: (prod === "ANULADA" || cant === 0) ? "--- ANULADA ---" : prod,
                 cantidad: cant,
-                precio: limpiarNum(document.getElementById('v_precio').value),
-                descuento: limpiarNum(document.getElementById('v_desc').value),
-                total: limpiarNum(document.getElementById('v_total').innerText),
+                precio: parseFloat(document.getElementById('v_precio').value),
+                descuento: parseFloat(document.getElementById('v_desc').value),
+                total: parseFloat(document.getElementById('v_total').innerText),
                 clienteId: cid
             };
 
             if (idx > -1) app.ventas[idx] = ven;
             else {
                 app.ventas.unshift(ven);
-                let o = document.getElementById('v_orden').value;
-                if (!isNaN(o) && o !== "") document.getElementById('v_orden').value = parseInt(o) + 1;
+                let ord = document.getElementById('v_orden').value;
+                if (!isNaN(ord) && ord !== "") document.getElementById('v_orden').value = parseInt(ord) + 1;
             }
-
             save(ven);
             cancelarVenta();
         }
 
-        function renderVentas() {
-            const l = document.getElementById('lista_ventas');
-            if(!l) return;
-            l.innerHTML = app.ventas.map((v, i) => `
-                <tr class="border-b">
-                    <td class="p-2">${v.fecha || v.FECHA}<br><b class="text-blue-600">${v.orden || v.ORDEN}</b></td>
-                    <td class="p-2 font-bold">${v.placa || v.PLACA}</td>
-                    <td class="p-2">${v.producto || v.PRODUCTO}<br>${v.cantidad || v.CANTIDAD} Gls</td>
-                    <td class="p-2 text-right font-bold">$${limpiarNum(v.total || v.TOTAL).toFixed(2)}</td>
-                    <td class="p-2 text-center">
-                        <button onclick="editarVenta(${i})" class="text-blue-500">✎</button>
-                    </td>
-                </tr>`).join('');
-        }
-
-        function cancelarVenta() {
-            document.getElementById('v_edit_index').value = "-1";
-            document.getElementById('v_cant').value = "";
-            document.getElementById('v_total').innerText = "0.00";
-            document.getElementById('btn-registrar').innerText = "Guardar";
-        }
-
         function editarVenta(i) {
             const v = app.ventas[i];
-            document.getElementById('v_fecha').value = v.fecha || v.FECHA || "";
-            document.getElementById('v_orden').value = v.orden || v.ORDEN || "";
-            document.getElementById('v_cliente').value = v.clienteId || v.CLIENTEID || "";
+            document.getElementById('v_fecha').value = v.fecha;
+            document.getElementById('v_orden').value = v.orden;
+            document.getElementById('v_cliente').value = v.clienteId;
             filtrarPlacas();
-            document.getElementById('v_placa').value = v.placa || v.PLACA || "";
-            document.getElementById('v_area').value = v.area || v.AREA || "";
-            document.getElementById('v_prod').value = v.producto || v.PRODUCTO || "";
-            document.getElementById('v_cant').value = v.cantidad || v.CANTIDAD || "";
-            document.getElementById('v_precio').value = v.precio || v.PRECIO || "";
-            document.getElementById('v_desc').value = v.descuento || v.DESCUENTO || 0;
-            calcVenta();
+            document.getElementById('v_placa').value = v.placa;
+            document.getElementById('v_area').value = v.area;
+            document.getElementById('v_prod').value = (v.producto === "--- ANULADA ---") ? "ANULADA" : v.producto;
+            document.getElementById('v_cant').value = v.cantidad;
+            document.getElementById('v_precio').value = v.precio;
+            document.getElementById('v_desc').value = v.descuento;
+            document.getElementById('v_total').innerText = v.total;
             document.getElementById('v_edit_index').value = i;
             document.getElementById('btn-registrar').innerText = "Actualizar";
             verTab('ventas');
         }
 
-        // --- COMPRAS ---
-        function calcCostoCompra() {
-            const c = limpiarNum(document.getElementById('c_cant').value);
-            const t = limpiarNum(document.getElementById('c_costo_total').value);
-            document.getElementById('c_unitario_show').innerText = "$" + (c > 0 ? (t / c).toFixed(2) : "0.00");
+        function eliminarVenta(i) { if (confirm("¿Eliminar registro?")) { app.ventas.splice(i, 1); save(); } }
+
+        function cancelarVenta() {
+            document.getElementById('v_edit_index').value = "-1";
+            document.getElementById('btn-registrar').innerText = "Guardar";
+            document.getElementById('v_cant').value = "";
+            document.getElementById('v_total').innerText = "0.00";
         }
 
-        function registrarCompra() {
-            const f = document.getElementById('c_fecha').value;
-            const cant = limpiarNum(document.getElementById('c_cant').value);
-            const prod = document.getElementById('c_prod').value;
-            if (!f || cant <= 0) return alert("Faltan datos");
-
-            const obj = {
-                tipo: "COMPRAS",
-                fecha: f,
-                factura: document.getElementById('c_factura').value,
-                producto: prod,
-                cantidad: cant,
-                costoTotal: limpiarNum(document.getElementById('c_costo_total').value),
-                precioVenta: limpiarNum(document.getElementById('c_precio_venta').value)
-            };
-
-            const idx = parseInt(document.getElementById('c_edit_index').value);
-            if (idx > -1) app.compras[idx] = obj;
-            else app.compras.unshift(obj);
-
-            app.precios[prod] = obj.precioVenta;
-            save(obj);
-            cancelarCompra();
-        }
-
-        function renderCompras() {
-            const l = document.getElementById('lista_compras');
-            if(!l) return;
-            l.innerHTML = app.compras.map((c, i) => `
-                <tr class="border-b">
-                    <td class="p-2">${c.fecha || c.FECHA}</td>
-                    <td class="p-2">${c.factura || c.FACTURA}</td>
-                    <td class="p-2 font-bold">${c.producto || c.PRODUCTO}</td>
-                    <td class="p-2">${c.cantidad || c.CANTIDAD}</td>
-                    <td class="p-2 text-right font-bold">$${limpiarNum(c.costoTotal || c.COSTOTOTAL).toFixed(2)}</td>
-                    <td class="p-2 text-center"><button onclick="editarCompra(${i})" class="text-blue-500">✎</button></td>
-                </tr>`).join('');
-        }
-
-        function cancelarCompra() {
-            document.getElementById('c_edit_index').value = "-1";
-            ["c_cant", "c_costo_total", "c_factura", "c_precio_venta"].forEach(id => document.getElementById(id).value = "");
-        }
-
-        // --- UI & SELECTS ---
-        function actualizarSelects() {
-            let h = '<option value="">-- Cliente --</option>';
-            app.clientes.forEach(c => { h += `<option value="${c.id || c.ID}">${c.nombre || c.NOMBRE}</option>`; });
-            document.getElementById('v_cliente').innerHTML = h;
-            actualizarSelectAdmin();
-        }
-
-        function actualizarSelectAdmin() {
-            const sel = document.getElementById('adm_v_cli');
-            if(!sel) return;
-            let h = '';
-            app.clientes.forEach(c => { h += `<option value="${c.id || c.ID}">${c.nombre || c.NOMBRE}</option>`; });
-            sel.innerHTML = h;
-        }
-
-        function actualizarUI() {
-            const prods = ["Súper", "Regular", "Diésel"];
-            prods.forEach(p => {
-                const norm = p.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-                const tc = app.compras.filter(x => (x.producto || x.PRODUCTO || "").toLowerCase().includes(norm)).reduce((s, x) => s + limpiarNum(x.cantidad || x.CANTIDAD), 0);
-                const tv = app.ventas.filter(x => (x.producto || x.PRODUCTO || "").toLowerCase().includes(norm)).reduce((s, x) => s + limpiarNum(x.cantidad || x.CANTIDAD), 0);
-                const el = document.getElementById("stk_" + norm);
-                if (el) el.innerText = (tc - tv).toFixed(1);
-            });
+        function renderVentas() {
+            document.getElementById('lista_ventas').innerHTML = app.ventas.map((v, i) => `
+                    <tr class="border-b">
+                        <td class="p-2">${v.fecha || ''}<br><span class="text-blue-600 font-bold">${v.orden || ''}</span></td>
+                        <td class="p-2 font-bold">${v.placa || ''}</td>
+                        <td class="p-2">${v.producto || ''}<br>${v.cantidad || 0} Gls</td>
+                        <td class="p-2 text-right font-bold">$${parseFloat(v.total || 0).toFixed(2)}</td>
+                        <td class="p-2 text-center">
+                            <button onclick="editarVenta(${i})" class="text-blue-500 mr-1">✎</button>
+                            <button onclick="eliminarVenta(${i})" class="text-red-500">🗑</button>
+                        </td>
+                    </tr>`).join('');
         }
 
         // --- REPORTES ---
+        function exportarVentasExcel() { const ws = XLSX.utils.json_to_sheet(app.ventas); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Ventas"); XLSX.writeFile(wb, "Historial_Ventas.xlsx"); }
+        function exportarComprasExcel() { const ws = XLSX.utils.json_to_sheet(app.compras); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Compras"); XLSX.writeFile(wb, "Historial_Compras.xlsx"); }
+        function exportarBIExcel(t) { const data = []; document.querySelectorAll(`#res_por_${t} tr`).forEach(tr => { const td = tr.querySelectorAll("td"); data.push({ [t.toUpperCase()]: td[0].innerText, GLS: td[1].innerText, TOTAL: td[2].innerText }); }); const ws = XLSX.utils.json_to_sheet(data); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, t); XLSX.writeFile(wb, `Reporte_${t}.xlsx`); }
+
         function calcularContabilidad() {
-            const d = document.getElementById('cont_desde').value;
-            const h = document.getElementById('cont_hasta').value;
+            const d = document.getElementById('cont_desde').value, h = document.getElementById('cont_hasta').value;
             let f = app.ventas;
-            if (d) f = f.filter(v => (v.fecha || v.FECHA) >= d);
-            if (h) f = f.filter(v => (v.fecha || v.FECHA) <= h);
+            if (d) f = f.filter(v => v.fecha >= d);
+            if (h) f = f.filter(v => v.fecha <= h);
 
-            const agP = {};
-            f.forEach(v => {
-                const p = (v.placa || v.PLACA || "S/P").toUpperCase();
-                if (!agP[p]) agP[p] = { g: 0, t: 0 };
-                agP[p].g += limpiarNum(v.cantidad || v.CANTIDAD);
-                agP[p].t += limpiarNum(v.total || v.TOTAL);
-            });
-            document.getElementById('res_por_placa').innerHTML = Object.entries(agP).map(([p, d]) => `<tr><td>${p}</td><td class="text-center">${d.g.toFixed(1)}</td><td class="text-right font-bold">$${d.t.toFixed(2)}</td></tr>`).join('');
+            const agP = {}; f.forEach(v => { if (!agP[v.placa]) agP[v.placa] = { g: 0, t: 0 }; agP[v.placa].g += parseFloat(v.cantidad || 0); agP[v.placa].t += parseFloat(v.total || 0); });
+            document.getElementById('res_por_placa').innerHTML = Object.entries(agP).map(([p, d]) => `<tr><td class="p-1">${p}</td><td class="p-1 text-center font-bold">${d.g.toFixed(1)}</td><td class="p-1 text-right font-bold">$${d.t.toFixed(2)}</td></tr>`).join('');
 
-            const agA = {};
-            f.forEach(v => {
-                const a = (v.area || v.AREA || "S/A").toUpperCase();
-                if (!agA[a]) agA[a] = { g: 0, t: 0 };
-                agA[a].g += limpiarNum(v.cantidad || v.CANTIDAD);
-                agA[a].t += limpiarNum(v.total || v.TOTAL);
-            });
-            document.getElementById('res_por_area').innerHTML = Object.entries(agA).map(([a, d]) => `<tr><td>${a}</td><td class="text-center">${d.g.toFixed(1)}</td><td class="text-right font-bold">$${d.t.toFixed(2)}</td></tr>`).join('');
+            const agA = {}; f.forEach(v => { const a = v.area || "S/A"; if (!agA[a]) agA[a] = { g: 0, t: 0 }; agA[a].g += parseFloat(v.cantidad || 0); agA[a].t += parseFloat(v.total || 0); });
+            document.getElementById('res_por_area').innerHTML = Object.entries(agA).map(([a, d]) => `<tr><td class="p-1">${a}</td><td class="p-1 text-center font-bold">${d.g.toFixed(1)}</td><td class="p-1 text-right font-bold">$${d.t.toFixed(2)}</td></tr>`).join('');
             updateChart(f);
         }
 
         function updateChart(data) {
             const ctx = document.getElementById('chartVentas').getContext('2d');
-            const ag = {}; 
-            data.forEach(v => {
-                const f = v.fecha || v.FECHA;
-                ag[f] = (ag[f] || 0) + limpiarNum(v.total || v.TOTAL);
-            });
+            const ag = {}; data.forEach(v => ag[v.fecha] = (ag[v.fecha] || 0) + parseFloat(v.total || 0));
             const labels = Object.keys(ag).sort().slice(-7);
             if (myChart) myChart.destroy();
             myChart = new Chart(ctx, { type: 'bar', data: { labels, datasets: [{ label: 'Ventas $', data: labels.map(l => ag[l]), backgroundColor: '#4f46e5' }] } });
@@ -461,30 +438,123 @@
         function addCliente() {
             const n = document.getElementById('adm_c_nom').value;
             if (n) {
-                const c = { tipo: "CLIENTE", id: Date.now(), nombre: n };
-                app.clientes.push(c);
-                save(c);
-                document.getElementById('adm_c_nom').value = "";
+                const nuevoCliente = { tipo: "CLIENTES", id: Date.now(), nombre: n };
+                app.clientes.push(nuevoCliente);
+                save(nuevoCliente);
                 actualizarSelects();
+                document.getElementById('adm_c_nom').value = "";
             }
         }
 
         function addVehiculo() {
-            const cid = document.getElementById('adm_v_cli').value;
-            const placa = document.getElementById('adm_v_pla').value.toUpperCase();
-            const area = document.getElementById('adm_v_area').value;
-            if (cid && placa) {
-                const v = { tipo: "VEHICULO", cid, placa, area };
-                app.vehiculos.push(v);
-                save(v);
+            const p = document.getElementById('adm_v_pla').value.toUpperCase();
+            const c = document.getElementById('adm_v_cli').value;
+            const a = document.getElementById('adm_v_area').value;
+            if (p && c) {
+                const nuevoVehiculo = { tipo: "VEHICULOS", placa: p, cid: c, area: a };
+                app.vehiculos.push(nuevoVehiculo);
+                save(nuevoVehiculo);
+                actualizarSelects();
+                alert("✅ Vehículo vinculado");
                 document.getElementById('adm_v_pla').value = "";
                 document.getElementById('adm_v_area').value = "";
             }
         }
 
-        function borrarTodo() { if (confirm("¿Borrar TODO?")) { localStorage.clear(); location.reload(); } }
-        function descargarBackup() { const blob = new Blob([JSON.stringify(app)], {type: 'application/json'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'fuel_backup.json'; a.click(); }
-        function restaurarBackup(e) { const reader = new FileReader(); reader.onload = (ev) => { app = JSON.parse(ev.target.result); save(); location.reload(); }; reader.readAsText(e.target.files[0]); }
+        function actualizarSelects() {
+            let opciones = '<option value="">-- Cliente --</option>';
+            opciones += app.clientes.map(c => `<option value="${c.id || c.ID}">${c.nombre || c.NOMBRE}</option>`).join('');
+            document.getElementById('adm_v_cli').innerHTML = opciones;
+            document.getElementById('v_cliente').innerHTML = opciones;
+        }
+
+        // --- EL VÍNCULO CRÍTICO (CORREGIDO) ---
+        // --- EL VÍNCULO CRÍTICO (VERSIÓN ULTRA-COMPATIBLE) ---
+        function filtrarPlacas() {
+            const clienteIdRaw = document.getElementById('v_cliente').value;
+            // .trim() elimina espacios invisibles que el móvil a veces añade
+            const clienteId = String(clienteIdRaw).trim();
+
+            console.log("Filtrando para cliente ID:", clienteId); // Para depurar en consola
+
+            // Buscamos ignorando mayúsculas/minúsculas en las llaves (cid o CID)
+            const filtrados = app.vehiculos.filter(v => {
+                const v_cid = String(v.cid || v.CID || "").trim();
+                return v_cid === clienteId;
+            });
+
+            let html = '<option value="">-- Placa --</option>';
+            if (filtrados.length > 0) {
+                html += filtrados.map(v => {
+                    const p = (v.placa || v.PLACA || "").toUpperCase();
+                    return `<option value="${p}">${p}</option>`;
+                }).join('');
+            } else {
+                console.warn("No se encontraron placas para este cliente en el móvil");
+            }
+
+            document.getElementById('v_placa').innerHTML = html;
+            document.getElementById('v_area').value = "";
+        }
+
+        function actualizarArea() {
+            const placaRaw = document.getElementById('v_placa').value;
+            const placa = String(placaRaw).trim().toUpperCase();
+
+            // Buscamos la placa con tolerancia a fallos de escritura
+            const vehiculo = app.vehiculos.find(v => {
+                const v_placa = String(v.placa || v.PLACA || "").trim().toUpperCase();
+                return v_placa === placa;
+            });
+
+            if (vehiculo) {
+                document.getElementById('v_area').value = vehiculo.area || vehiculo.AREA || "";
+            }
+        }
+
+        function actualizarUI() {
+            ["Súper", "Regular", "Diésel"].forEach(prod => {
+                const c = app.compras.filter(i => (i.producto || i.PRODUCTO) === prod).reduce((s, i) => s + parseFloat(i.cantidad || 0), 0);
+                const v = app.ventas.filter(i => (i.producto || i.PRODUCTO) === prod).reduce((s, i) => s + parseFloat(i.cantidad || 0), 0);
+                const id = "stk_" + prod.toLowerCase().replace("ú", "u");
+                if (document.getElementById(id)) document.getElementById(id).innerText = (c - v).toFixed(1);
+            });
+        }
+
+        function descargarBackup() { const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(app)); const dl = document.createElement('a'); dl.setAttribute("href", dataStr); dl.setAttribute("download", "BACKUP_FUEL.json"); dl.click(); }
+        function restaurarBackup(ev) { const reader = new FileReader(); reader.onload = e => { app = JSON.parse(e.target.result); save(); location.reload(); }; reader.readAsText(ev.target.files[0]); }
+        function borrarTodo() { if (confirm("¿BORRAR TODO?")) { localStorage.clear(); location.reload(); } }
+
+        async function actualizarTodo() {
+            actualizarUI();
+            renderVentas();
+            renderCompras();
+            actualizarSelects();
+
+            console.log("🔄 Sincronizando datos de Nube...");
+            try {
+                const res = await fetch(WEB_APP_URL + "?action=readDB");
+                const data = await res.json();
+                if (data) {
+                    app.clientes = data.clientes || app.clientes;
+                    app.vehiculos = data.vehiculos || app.vehiculos;
+                    app.ventas = data.ventas || app.ventas;
+                    app.compras = data.compras || app.compras;
+                    localStorage.setItem('fuelDB', JSON.stringify(app));
+                    actualizarUI();
+                    renderVentas();
+                    renderCompras();
+                    actualizarSelects();
+                    console.log("✅ Sincronización completa");
+                }
+            } catch (e) { console.warn("⚠️ Modo offline o error de red."); }
+        }
+
+        window.onload = function () {
+            document.getElementById('v_fecha').valueAsDate = new Date();
+            document.getElementById('c_fecha').valueAsDate = new Date();
+            actualizarTodo();
+        };
     </script>
 </body>
 </html>
