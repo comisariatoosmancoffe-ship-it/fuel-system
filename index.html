@@ -270,14 +270,75 @@
             const cant = parseFloat(document.getElementById('c_cant').value) || 0;
             const totalC = parseFloat(document.getElementById('c_costo_total').value) || 0;
             const idx = parseInt(document.getElementById('c_edit_index').value);
-            if (!f || cant <= 0) return alert("Faltan datos");
 
-            const obj = { tipo: "COMPRA", fecha: f, factura: document.getElementById('c_factura').value, producto: prod, cantidad: cant, costoTotal: totalC, unitario: totalC / cant, precioVenta: parseFloat(document.getElementById('c_precio_venta').value) || 0 };
+            if (!f || cant <= 0) return alert("Faltan datos obligatorios en la compra");
 
-            if (idx > -1) { app.compras[idx] = obj; } else { app.compras.unshift(obj); }
+            const obj = {
+                tipo: "COMPRAS", // Asegúrate que en tu Excel la pestaña se llame COMPRAS
+                fecha: f,
+                factura: document.getElementById('c_factura').value,
+                producto: prod,
+                cantidad: cant,
+                costoTotal: totalC,
+                unitario: totalC / cant,
+                precioVenta: parseFloat(document.getElementById('c_precio_venta').value) || 0
+            };
+
+            if (idx > -1) {
+                app.compras[idx] = obj;
+            } else {
+                app.compras.unshift(obj);
+            }
+
+            // Actualizar el precio de venta actual para este producto
             app.precios[prod] = obj.precioVenta;
+
+            // Guardar localmente y enviar a la nube
             save(obj);
             cancelarCompra();
+            renderCompras(); // Forzar dibujo de la lista
+        }
+
+        function renderCompras() {
+            const lista = document.getElementById('lista_compras');
+            if (!lista) return;
+
+            if (!app.compras || app.compras.length === 0) {
+                lista.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-gray-400 italic">No hay compras registradas</td></tr>';
+                return;
+            }
+
+            lista.innerHTML = app.compras.map((c, i) => {
+                // Soporte multinombre para cada columna (PC y Nube)
+                const fecha = c.fecha || c.FECHA || '---';
+                const factura = c.factura || c.FACTURA || 'S/N';
+                const producto = c.producto || c.PRODUCTO || '---';
+                const cantidad = c.cantidad || c.CANTIDAD || 0;
+
+                // Buscamos el total en todas sus posibles variantes de nombre
+                let rawTotal = c.costoTotal || c.COSTOTOTAL || c.total || c.TOTAL || 0;
+
+                // Limpiamos el valor por si viene con símbolos de moneda o comas
+                if (typeof rawTotal === "string") {
+                    rawTotal = rawTotal.replace(/[^0-9.]/g, '');
+                }
+                const totalNum = parseFloat(rawTotal) || 0;
+
+                return `
+                <tr class="border-b hover:bg-gray-50">
+                    <td class="p-2">${fecha}</td>
+                    <td class="p-2 text-[9px] font-mono">${factura}</td>
+                    <td class="p-2 font-bold text-emerald-700">${producto}</td>
+                    <td class="p-2 font-semibold">${cantidad} <small>Gls</small></td>
+                    <td class="p-2 text-right font-black text-slate-900">$${totalNum.toFixed(2)}</td>
+                    <td class="p-2 text-center">
+                        <div class="flex justify-center gap-2">
+                            <button onclick="editarCompra(${i})" class="text-blue-500 bg-blue-50 p-1 rounded">✎</button>
+                            <button onclick="eliminarCompra(${i})" class="text-red-500 bg-red-50 p-1 rounded">🗑</button>
+                        </div>
+                    </td>
+                </tr>`;
+            }).join('');
         }
 
         function editarCompra(i) {
@@ -301,20 +362,7 @@
             ["c_cant", "c_costo_total", "c_factura", "c_precio_venta"].forEach(id => document.getElementById(id).value = "");
         }
 
-        function renderCompras() {
-            document.getElementById('lista_compras').innerHTML = app.compras.map((c, i) => `
-                    <tr class="border-b">
-                        <td class="p-2">${c.fecha || ''}</td>
-                        <td class="p-2 text-[9px]">${c.factura || ''}</td>
-                        <td class="p-2 font-bold">${c.producto || ''}</td>
-                        <td class="p-2">${c.cantidad || 0}</td>
-                        <td class="p-2 text-right font-bold">$${parseFloat(c.costoTotal || 0).toFixed(2)}</td>
-                        <td class="p-2 text-center">
-                            <button onclick="editarCompra(${i})" class="text-blue-500 mr-2">✎</button>
-                            <button onclick="eliminarCompra(${i})" class="text-red-500">🗑</button>
-                        </td>
-                    </tr>`).join('');
-        }
+
 
         // --- VENTAS ---
         function asignarPrecioAuto() {
@@ -337,33 +385,41 @@
             const placa = document.getElementById('v_placa').value;
             const idx = parseInt(document.getElementById('v_edit_index').value);
 
-            if (!prod || !placa || !cid) return alert("Faltan datos obligatorios");
+            if (!prod || !placa || !cid || cant <= 0) {
+                alert("Por favor rellene: Cliente, Placa, Producto y Cantidad");
+                return;
+            }
 
             const clientObj = app.clientes.find(c => String(c.id || c.ID) === String(cid));
 
             const ven = {
-                tipo: "VENTA",
+                tipo: "VENTAS", // Debe coincidir con el nombre de tu hoja en Excel
                 fecha: document.getElementById('v_fecha').value,
                 orden: document.getElementById('v_orden').value,
-                cliente: clientObj.nombre || clientObj.NOMBRE,
+                cliente: clientObj ? (clientObj.nombre || clientObj.NOMBRE) : "Desconocido",
                 placa: placa,
                 area: document.getElementById('v_area').value,
-                producto: (prod === "ANULADA" || cant === 0) ? "--- ANULADA ---" : prod,
+                producto: (prod === "ANULADA") ? "--- ANULADA ---" : prod,
                 cantidad: cant,
-                precio: parseFloat(document.getElementById('v_precio').value),
-                descuento: parseFloat(document.getElementById('v_desc').value),
-                total: parseFloat(document.getElementById('v_total').innerText),
+                precio: parseFloat(document.getElementById('v_precio').value) || 0,
+                descuento: parseFloat(document.getElementById('v_desc').value) || 0,
+                total: parseFloat(document.getElementById('v_total').innerText) || 0,
                 clienteId: cid
             };
 
-            if (idx > -1) app.ventas[idx] = ven;
-            else {
+            if (idx > -1) {
+                app.ventas[idx] = ven;
+            } else {
                 app.ventas.unshift(ven);
+                // Incrementar número de orden automáticamente si es numérico
                 let ord = document.getElementById('v_orden').value;
                 if (!isNaN(ord) && ord !== "") document.getElementById('v_orden').value = parseInt(ord) + 1;
             }
-            save(ven);
+
+            save(ven); // Esta es la función que ya arreglamos y que envía a la nube
             cancelarVenta();
+            renderVentas();
+            actualizarUI(); // Para que el stock baje inmediatamente en los cuadros de arriba
         }
 
         function editarVenta(i) {
@@ -394,17 +450,33 @@
         }
 
         function renderVentas() {
-            document.getElementById('lista_ventas').innerHTML = app.ventas.map((v, i) => `
-                    <tr class="border-b">
-                        <td class="p-2">${v.fecha || ''}<br><span class="text-blue-600 font-bold">${v.orden || ''}</span></td>
-                        <td class="p-2 font-bold">${v.placa || ''}</td>
-                        <td class="p-2">${v.producto || ''}<br>${v.cantidad || 0} Gls</td>
-                        <td class="p-2 text-right font-bold">$${parseFloat(v.total || 0).toFixed(2)}</td>
-                        <td class="p-2 text-center">
-                            <button onclick="editarVenta(${i})" class="text-blue-500 mr-1">✎</button>
-                            <button onclick="eliminarVenta(${i})" class="text-red-500">🗑</button>
-                        </td>
-                    </tr>`).join('');
+            const lista = document.getElementById('lista_ventas');
+            if (!lista) return;
+
+            lista.innerHTML = app.ventas.map((v, i) => {
+                const fecha = v.fecha || v.FECHA || '';
+                const orden = v.orden || v.ORDEN || '';
+                const placa = v.placa || v.PLACA || '';
+                const prod = v.producto || v.PRODUCTO || '';
+                const cant = v.cantidad || v.CANTIDAD || 0;
+
+                // CORRECCIÓN AQUÍ: Forzar que el total sea número
+                let totalVal = v.total || v.TOTAL || 0;
+                if (typeof totalVal === "string") totalVal = totalVal.replace(/[^0-9.]/g, '');
+                const totalNum = parseFloat(totalVal) || 0;
+
+                return `
+                <tr class="border-b">
+                    <td class="p-2">${fecha}<br><span class="text-blue-600 font-bold">${orden}</span></td>
+                    <td class="p-2 font-bold">${placa}</td>
+                    <td class="p-2">${prod}<br>${cant} Gls</td>
+                    <td class="p-2 text-right font-bold">$${totalNum.toFixed(2)}</td>
+                    <td class="p-2 text-center">
+                        <button onclick="editarVenta(${i})" class="text-blue-500 mr-1">✎</button>
+                        <button onclick="eliminarVenta(${i})" class="text-red-500">🗑</button>
+                    </td>
+                </tr>`;
+            }).join('');
         }
 
         // --- REPORTES ---
@@ -413,18 +485,87 @@
         function exportarBIExcel(t) { const data = []; document.querySelectorAll(`#res_por_${t} tr`).forEach(tr => { const td = tr.querySelectorAll("td"); data.push({ [t.toUpperCase()]: td[0].innerText, GLS: td[1].innerText, TOTAL: td[2].innerText }); }); const ws = XLSX.utils.json_to_sheet(data); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, t); XLSX.writeFile(wb, `Reporte_${t}.xlsx`); }
 
         function calcularContabilidad() {
-            const d = document.getElementById('cont_desde').value, h = document.getElementById('cont_hasta').value;
+            const d = document.getElementById('cont_desde').value;
+            const h = document.getElementById('cont_hasta').value;
             let f = app.ventas;
-            if (d) f = f.filter(v => v.fecha >= d);
-            if (h) f = f.filter(v => v.fecha <= h);
 
-            const agP = {}; f.forEach(v => { if (!agP[v.placa]) agP[v.placa] = { g: 0, t: 0 }; agP[v.placa].g += parseFloat(v.cantidad || 0); agP[v.placa].t += parseFloat(v.total || 0); });
-            document.getElementById('res_por_placa').innerHTML = Object.entries(agP).map(([p, d]) => `<tr><td class="p-1">${p}</td><td class="p-1 text-center font-bold">${d.g.toFixed(1)}</td><td class="p-1 text-right font-bold">$${d.t.toFixed(2)}</td></tr>`).join('');
+            // 1. Filtrar por fecha (soporta minúsculas y MAYÚSCULAS de la nube)
+            if (d) f = f.filter(v => (v.fecha || v.FECHA) >= d);
+            if (h) f = f.filter(v => (v.fecha || v.FECHA) <= h);
 
-            const agA = {}; f.forEach(v => { const a = v.area || "S/A"; if (!agA[a]) agA[a] = { g: 0, t: 0 }; agA[a].g += parseFloat(v.cantidad || 0); agA[a].t += parseFloat(v.total || 0); });
-            document.getElementById('res_por_area').innerHTML = Object.entries(agA).map(([a, d]) => `<tr><td class="p-1">${a}</td><td class="p-1 text-center font-bold">${d.g.toFixed(1)}</td><td class="p-1 text-right font-bold">$${d.t.toFixed(2)}</td></tr>`).join('');
+            // 2. Agrupar por Placa
+            const agP = {};
+            f.forEach(v => {
+                const placa = (v.placa || v.PLACA || "S/P").toUpperCase();
+
+                // --- AQUÍ ESTÁ EL CAMBIO: Limpieza de números ---
+                const cant = limpiarNum(v.cantidad || v.CANTIDAD);
+                const total = limpiarNum(v.total || v.TOTAL);
+
+                if (!agP[placa]) agP[placa] = { g: 0, t: 0 };
+                agP[placa].g += cant;
+                agP[placa].t += total;
+            });
+
+            document.getElementById('res_por_placa').innerHTML = Object.entries(agP).map(([p, d]) => `
+            <tr class="border-b">
+                <td class="p-1">${p}</td>
+                <td class="p-1 text-center font-bold">${d.g.toFixed(1)}</td>
+                <td class="p-1 text-right font-bold text-blue-600">$${d.t.toFixed(2)}</td>
+            </tr>`).join('');
+
+            // 3. Agrupar por Área
+            const agA = {};
+            f.forEach(v => {
+                const area = (v.area || v.AREA || "SIN ÁREA").toUpperCase();
+
+                // --- AQUÍ TAMBIÉN: Limpieza de números ---
+                const cant = limpiarNum(v.cantidad || v.CANTIDAD);
+                const total = limpiarNum(v.total || v.TOTAL);
+
+                if (!agA[area]) agA[area] = { g: 0, t: 0 };
+                agA[area].g += cant;
+                agA[area].t += total;
+            });
+
+            document.getElementById('res_por_area').innerHTML = Object.entries(agA).map(([a, d]) => `
+            <tr class="border-b">
+                <td class="p-1">${a}</td>
+                <td class="p-1 text-center font-bold">${d.g.toFixed(1)}</td>
+                <td class="p-1 text-right font-bold text-emerald-600">$${d.t.toFixed(2)}</td>
+            </tr>`).join('');
+
             updateChart(f);
         }
+
+        document.getElementById('res_por_placa').innerHTML = Object.entries(agP).map(([p, d]) => `
+            <tr class="border-b">
+                <td class="p-1">${p}</td>
+                <td class="p-1 text-center font-bold">${d.g.toFixed(1)}</td>
+                <td class="p-1 text-right font-bold text-blue-600">$${d.t.toFixed(2)}</td>
+            </tr>`).join('');
+
+        // Agrupar por Área
+        const agA = {};
+        f.forEach(v => {
+            const area = (v.area || v.AREA || "SIN ÁREA").toUpperCase();
+            const cant = parseFloat(v.cantidad || v.CANTIDAD || 0);
+            const total = parseFloat(v.total || v.TOTAL || 0);
+
+            if (!agA[area]) agA[area] = { g: 0, t: 0 };
+            agA[area].g += cant;
+            agA[area].t += total;
+        });
+
+        document.getElementById('res_por_area').innerHTML = Object.entries(agA).map(([a, d]) => `
+            <tr class="border-b">
+                <td class="p-1">${a}</td>
+                <td class="p-1 text-center font-bold">${d.g.toFixed(1)}</td>
+                <td class="p-1 text-right font-bold text-emerald-600">$${d.t.toFixed(2)}</td>
+            </tr>`).join('');
+
+        updateChart(f);
+
 
         function updateChart(data) {
             const ctx = document.getElementById('chartVentas').getContext('2d');
@@ -513,41 +654,78 @@
         }
 
         function actualizarUI() {
-            ["Súper", "Regular", "Diésel"].forEach(prod => {
-                const c = app.compras.filter(i => (i.producto || i.PRODUCTO) === prod).reduce((s, i) => s + parseFloat(i.cantidad || 0), 0);
-                const v = app.ventas.filter(i => (i.producto || i.PRODUCTO) === prod).reduce((s, i) => s + parseFloat(i.cantidad || 0), 0);
-                const id = "stk_" + prod.toLowerCase().replace("ú", "u");
-                if (document.getElementById(id)) document.getElementById(id).innerText = (c - v).toFixed(1);
+            const productos = ["Súper", "Regular", "Diésel"];
+            productos.forEach(prod => {
+                const prodLimpio = prod.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+                const c = app.compras.reduce((s, i) => {
+                    const p = (i.producto || i.PRODUCTO || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                    return p === prodLimpio ? s + limpiarNum(i.cantidad || i.CANTIDAD) : s;
+                }, 0);
+
+                const v = app.ventas.reduce((s, i) => {
+                    const p = (i.producto || i.PRODUCTO || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                    return p === prodLimpio ? s + limpiarNum(i.cantidad || i.CANTIDAD) : s;
+                }, 0);
+
+                const el = document.getElementById("stk_" + prodLimpio);
+                if (el) el.innerText = (c - v).toFixed(1);
             });
         }
-
         function descargarBackup() { const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(app)); const dl = document.createElement('a'); dl.setAttribute("href", dataStr); dl.setAttribute("download", "BACKUP_FUEL.json"); dl.click(); }
         function restaurarBackup(ev) { const reader = new FileReader(); reader.onload = e => { app = JSON.parse(e.target.result); save(); location.reload(); }; reader.readAsText(ev.target.files[0]); }
         function borrarTodo() { if (confirm("¿BORRAR TODO?")) { localStorage.clear(); location.reload(); } }
 
-        async function actualizarTodo() {
-            actualizarUI();
-            renderVentas();
-            renderCompras();
-            actualizarSelects();
 
-            console.log("🔄 Sincronizando datos de Nube...");
+        // --- LIMPIADOR UNIVERSAL DE NÚMEROS ---
+        function limpiarNum(valor) {
+            if (valor === null || valor === undefined || valor === "") return 0;
+            if (typeof valor === "number") return valor;
+            // Quita todo lo que no sea número o punto decimal
+            let limpio = String(valor).replace(/[^0-9.]/g, '');
+            return parseFloat(limpio) || 0;
+        }
+
+        async function actualizarTodo() {
             try {
                 const res = await fetch(WEB_APP_URL + "?action=readDB");
                 const data = await res.json();
                 if (data) {
-                    app.clientes = data.clientes || app.clientes;
-                    app.vehiculos = data.vehiculos || app.vehiculos;
-                    app.ventas = data.ventas || app.ventas;
-                    app.compras = data.compras || app.compras;
+                    // Limpiamos los datos de VENTAS al entrar
+                    app.ventas = (data.ventas || []).map(v => ({
+                        ...v,
+                        cantidad: limpiarNum(v.cantidad || v.CANTIDAD),
+                        total: limpiarNum(v.total || v.TOTAL),
+                        precio: limpiarNum(v.precio || v.PRECIO)
+                    }));
+
+                    // Limpiamos los datos de COMPRAS al entrar
+                    app.compras = (data.compras || []).map(c => ({
+                        ...c,
+                        cantidad: limpiarNum(c.cantidad || c.CANTIDAD),
+                        costoTotal: limpiarNum(c.costoTotal || c.COSTOTOTAL || c.TOTAL)
+                    }));
+
+                    app.clientes = data.clientes || [];
+                    app.vehiculos = data.vehiculos || [];
+
                     localStorage.setItem('fuelDB', JSON.stringify(app));
-                    actualizarUI();
-                    renderVentas();
-                    renderCompras();
-                    actualizarSelects();
-                    console.log("✅ Sincronización completa");
+                    refrescarPantalla();
                 }
-            } catch (e) { console.warn("⚠️ Modo offline o error de red."); }
+            } catch (e) {
+                console.error("Error cargando nube:", e);
+                refrescarPantalla();
+            }
+        }
+
+        function refrescarPantalla() {
+            actualizarUI();
+            renderVentas();
+            renderCompras();
+            actualizarSelects();
+            if (!document.getElementById('sec-contabilidad').classList.contains('hidden')) {
+                calcularContabilidad();
+            }
         }
 
         window.onload = function () {
