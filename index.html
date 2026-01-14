@@ -481,25 +481,90 @@ function renderCompras() {
         function exportarComprasExcel() { const ws = XLSX.utils.json_to_sheet(app.compras); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Compras"); XLSX.writeFile(wb, "Historial_Compras.xlsx"); }
         function exportarBIExcel(t) { const data = []; document.querySelectorAll(`#res_por_${t} tr`).forEach(tr => { const td = tr.querySelectorAll("td"); data.push({ [t.toUpperCase()]: td[0].innerText, GLS: td[1].innerText, TOTAL: td[2].innerText }); }); const ws = XLSX.utils.json_to_sheet(data); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, t); XLSX.writeFile(wb, `Reporte_${t}.xlsx`); }
 
-       function calcularContabilidad() { 
+     function calcularContabilidad() { 
     const d = document.getElementById('cont_desde').value;
     const h = document.getElementById('cont_hasta').value; 
     let f = app.ventas; 
     
+    // 1. Filtrar por fecha (soporta minúsculas y MAYÚSCULAS de la nube)
     if (d) f = f.filter(v => (v.fecha || v.FECHA) >= d); 
     if (h) f = f.filter(v => (v.fecha || v.FECHA) <= h); 
     
-    // Agrupar por Placa
+    // 2. Agrupar por Placa
     const agP = {}; 
     f.forEach(v => {
         const placa = (v.placa || v.PLACA || "S/P").toUpperCase();
-        const cant = parseFloat(v.cantidad || v.CANTIDAD || 0);
-        const total = parseFloat(v.total || v.TOTAL || 0);
+        
+        // --- AQUÍ ESTÁ EL CAMBIO: Limpieza de números ---
+        const cant = limpiarNum(v.cantidad || v.CANTIDAD);
+        const total = limpiarNum(v.total || v.TOTAL);
         
         if (!agP[placa]) agP[placa] = { g: 0, t: 0 };
         agP[placa].g += cant;
         agP[placa].t += total;
     }); 
+    
+    document.getElementById('res_por_placa').innerHTML = Object.entries(agP).map(([p, d]) => `
+        <tr class="border-b">
+            <td class="p-1">${p}</td>
+            <td class="p-1 text-center font-bold">${d.g.toFixed(1)}</td>
+            <td class="p-1 text-right font-bold text-blue-600">$${d.t.toFixed(2)}</td>
+        </tr>`).join(''); 
+    
+    // 3. Agrupar por Área
+    const agA = {}; 
+    f.forEach(v => { 
+        const area = (v.area || v.AREA || "SIN ÁREA").toUpperCase();
+        
+        // --- AQUÍ TAMBIÉN: Limpieza de números ---
+        const cant = limpiarNum(v.cantidad || v.CANTIDAD);
+        const total = limpiarNum(v.total || v.TOTAL);
+
+        if (!agA[area]) agA[area] = { g: 0, t: 0 }; 
+        agA[area].g += cant; 
+        agA[area].t += total; 
+    }); 
+    
+    document.getElementById('res_por_area').innerHTML = Object.entries(agA).map(([a, d]) => `
+        <tr class="border-b">
+            <td class="p-1">${a}</td>
+            <td class="p-1 text-center font-bold">${d.g.toFixed(1)}</td>
+            <td class="p-1 text-right font-bold text-emerald-600">$${d.t.toFixed(2)}</td>
+        </tr>`).join(''); 
+        
+    updateChart(f); 
+//}
+    
+    document.getElementById('res_por_placa').innerHTML = Object.entries(agP).map(([p, d]) => `
+        <tr class="border-b">
+            <td class="p-1">${p}</td>
+            <td class="p-1 text-center font-bold">${d.g.toFixed(1)}</td>
+            <td class="p-1 text-right font-bold text-blue-600">$${d.t.toFixed(2)}</td>
+        </tr>`).join(''); 
+    
+    // 3. Agrupar por Área
+    const agA = {}; 
+    f.forEach(v => { 
+        const area = (v.area || v.AREA || "SIN ÁREA").toUpperCase();
+        
+        // --- AQUÍ TAMBIÉN: Limpieza de números ---
+        const cant = limpiarNum(v.cantidad || v.CANTIDAD);
+        const total = limpiarNum(v.total || v.TOTAL);
+
+        if (!agA[area]) agA[area] = { g: 0, t: 0 }; 
+        agA[area].g += cant; 
+        agA[area].t += total; 
+    }); 
+    
+    document.getElementById('res_por_area').innerHTML = Object.entries(agA).map(([a, d]) => `
+        <tr class="border-b">
+            <td class="p-1">${a}</td>
+            <td class="p-1 text-center font-bold">${d.g.toFixed(1)}</td>
+            <td class="p-1 text-right font-bold text-emerald-600">$${d.t.toFixed(2)}</td>
+        </tr>`).join(''); 
+        
+    updateChart(f); 
+}
     
     document.getElementById('res_por_placa').innerHTML = Object.entries(agP).map(([p, d]) => `
         <tr class="border-b">
@@ -614,36 +679,23 @@ function actualizarArea() {
     }
 }
 
-     function actualizarUI() {
-    // Definimos los nombres tal cual quieres que se busquen
+    function actualizarUI() {
     const productos = ["Súper", "Regular", "Diésel"];
-    
     productos.forEach(prod => {
-        // Creamos una versión "limpia" para comparar (sin tildes y en minúscula)
         const prodLimpio = prod.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
-        // Sumar COMPRAS
         const c = app.compras.reduce((s, i) => {
-            const pCompra = (i.producto || i.PRODUCTO || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-            return pCompra === prodLimpio ? s + parseFloat(i.cantidad || i.CANTIDAD || 0) : s;
+            const p = (i.producto || i.PRODUCTO || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            return p === prodLimpio ? s + limpiarNum(i.cantidad || i.CANTIDAD) : s;
         }, 0);
             
-        // Sumar VENTAS
         const v = app.ventas.reduce((s, i) => {
-            const pVenta = (i.producto || i.PRODUCTO || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-            return pVenta === prodLimpio ? s + parseFloat(i.cantidad || i.CANTIDAD || 0) : s;
+            const p = (i.producto || i.PRODUCTO || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            return p === prodLimpio ? s + limpiarNum(i.cantidad || i.CANTIDAD) : s;
         }, 0);
         
-        // Identificar el ID del cuadrito en el HTML (stk_super, stk_regular, stk_diesel)
-        const idLabel = "stk_" + prodLimpio;
-        const el = document.getElementById(idLabel);
-        
-        if (el) {
-            const stockFinal = c - v;
-            el.innerText = stockFinal.toFixed(1);
-            // Color de alerta si el stock es bajo (menos de 100 galones)
-            el.style.color = stockFinal < 100 ? "#ef4444" : "#0f172a"; 
-        }
+        const el = document.getElementById("stk_" + prodLimpio);
+        if (el) el.innerText = (c - v).toFixed(1);
     });
 }
 
@@ -652,31 +704,55 @@ function actualizarArea() {
         function restaurarBackup(ev) { const reader = new FileReader(); reader.onload = e => { app = JSON.parse(e.target.result); save(); location.reload(); }; reader.readAsText(ev.target.files[0]); }
         function borrarTodo() { if (confirm("¿BORRAR TODO?")) { localStorage.clear(); location.reload(); } }
 
-       async function actualizarTodo() {
-    actualizarUI();
-    renderVentas();
-    renderCompras(); // <--- Asegúrate de que esta línea esté aquí
-    actualizarSelects();
-    
+     // --- LIMPIADOR UNIVERSAL DE NÚMEROS ---
+function limpiarNum(valor) {
+    if (valor === null || valor === undefined || valor === "") return 0;
+    if (typeof valor === "number") return valor;
+    // Quita todo lo que no sea número o punto decimal
+    let limpio = String(valor).replace(/[^0-9.]/g, '');
+    return parseFloat(limpio) || 0;
+}
+
+async function actualizarTodo() {
     try {
         const res = await fetch(WEB_APP_URL + "?action=readDB");
         const data = await res.json();
         if (data) {
-            // Mapeo flexible para asegurar que los datos entren bien
+            // Limpiamos los datos de VENTAS al entrar
+            app.ventas = (data.ventas || []).map(v => ({
+                ...v,
+                cantidad: limpiarNum(v.cantidad || v.CANTIDAD),
+                total: limpiarNum(v.total || v.TOTAL),
+                precio: limpiarNum(v.precio || v.PRECIO)
+            }));
+            
+            // Limpiamos los datos de COMPRAS al entrar
+            app.compras = (data.compras || []).map(c => ({
+                ...c,
+                cantidad: limpiarNum(c.cantidad || c.CANTIDAD),
+                costoTotal: limpiarNum(c.costoTotal || c.COSTOTOTAL || c.TOTAL)
+            }));
+
             app.clientes = data.clientes || [];
             app.vehiculos = data.vehiculos || [];
-            app.ventas = data.ventas || [];
-            app.compras = data.compras || []; // <--- Verifica que el Excel envíe "compras"
             
             localStorage.setItem('fuelDB', JSON.stringify(app));
-            
-            // Refrescar todo después de bajar de la nube
-            actualizarUI();
-            renderVentas();
-            renderCompras();
-            actualizarSelects();
+            refrescarPantalla();
         }
-    } catch (e) { console.warn("Modo offline o error de red."); }
+    } catch (e) { 
+        console.error("Error cargando nube:", e);
+        refrescarPantalla();
+    }
+}
+
+function refrescarPantalla() {
+    actualizarUI();
+    renderVentas();
+    renderCompras();
+    actualizarSelects();
+    if (!document.getElementById('sec-contabilidad').classList.contains('hidden')) {
+        calcularContabilidad();
+    }
 }
 
         window.onload = function() {
@@ -687,3 +763,4 @@ function actualizarArea() {
     </script>
 </body>
 </html>
+
