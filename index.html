@@ -2,318 +2,737 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>FuelMaster Pro v8.0</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FuelSystem Pro v7.0 - CLOUD SYNC</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
-<body class="bg-gray-100 min-h-screen text-gray-800">
+<body class="bg-slate-100 min-h-screen pb-20">
 
-    <nav class="bg-slate-900 text-white p-4 sticky top-0 z-50 shadow-2xl border-b-2 border-yellow-500">
-        <div class="flex justify-between items-center max-w-6xl mx-auto">
-            <h1 class="font-black italic text-xl tracking-tighter">FUEL<span class="text-yellow-400">MASTER</span></h1>
-            <div class="flex gap-2">
-                <button onclick="sincronizar()" class="bg-blue-600 px-3 py-1 rounded-lg text-xs font-bold">
-                    <i class="fas fa-sync"></i> SYNC
-                </button>
-                <div id="status-cloud" class="w-3 h-3 bg-red-500 rounded-full animate-pulse mt-2"></div>
+    <nav class="bg-blue-900 text-white p-4 sticky top-0 z-50 shadow-xl">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="font-black italic text-lg text-yellow-400">⛽ FUEL-MASTER CLOUD v7.0</h1>
+            <div class="flex space-x-1 text-[10px] font-bold">
+                <button onclick="verTab('ventas')" class="bg-blue-700 px-2 py-1 rounded">VENTAS</button>
+                <button onclick="verTab('compras')" class="bg-emerald-700 px-2 py-1 rounded">COMPRAS</button>
+                <button onclick="verTab('contabilidad')" class="bg-purple-700 px-2 py-1 rounded">REPORTES</button>
+                <button onclick="verTab('admin')" class="bg-slate-700 px-2 py-1 rounded">ADMIN</button>
             </div>
-        </div>
-        <div class="flex justify-around mt-4 text-[10px] font-bold uppercase tracking-widest">
-            <button onclick="verTab('ventas')" class="tab-btn border-b-2 border-yellow-400 pb-1" id="tab-ventas">Ventas</button>
-            <button onclick="verTab('compras')" class="tab-btn border-b-2 border-transparent pb-1" id="tab-compras">Compras</button>
-            <button onclick="verTab('reportes')" class="tab-btn border-b-2 border-transparent pb-1" id="tab-reportes">Reportes</button>
-            <button onclick="verTab('admin')" class="tab-btn border-b-2 border-transparent pb-1" id="tab-admin">Admin</button>
         </div>
     </nav>
 
-    <main class="p-3 max-w-6xl mx-auto">
-        <div class="grid grid-cols-3 gap-2 mb-4">
-            <div class="bg-white p-3 rounded-xl shadow-sm border-l-4 border-orange-500">
-                <p class="text-[9px] font-bold text-gray-400 uppercase">Súper</p>
-                <p class="text-lg font-black"><span id="inv-super">0</span> <small class="text-[10px] text-gray-400">Gls</small></p>
+    <main class="container mx-auto p-2 max-w-6xl">
+        <div class="grid grid-cols-3 gap-2 mb-4 text-center font-bold">
+            <div class="bg-white p-2 rounded shadow border-b-4 border-orange-500">
+                <p class="text-[10px] text-gray-400">Súper</p>
+                <p class="text-sm"><span id="stk_super">0</span> <small>Gls</small></p>
             </div>
-            <div class="bg-white p-3 rounded-xl shadow-sm border-l-4 border-red-500">
-                <p class="text-[9px] font-bold text-gray-400 uppercase">Regular</p>
-                <p class="text-lg font-black"><span id="inv-regular">0</span> <small class="text-[10px] text-gray-400">Gls</small></p>
+            <div class="bg-white p-2 rounded shadow border-b-4 border-red-500">
+                <p class="text-[10px] text-gray-400">Regular</p>
+                <p class="text-sm"><span id="stk_regular">0</span> <small>Gls</small></p>
             </div>
-            <div class="bg-white p-3 rounded-xl shadow-sm border-l-4 border-gray-900">
-                <p class="text-[9px] font-bold text-gray-400 uppercase">Diesel</p>
-                <p class="text-lg font-black"><span id="inv-diesel">0</span> <small class="text-[10px] text-gray-400">Gls</small></p>
+            <div class="bg-white p-2 rounded shadow border-b-4 border-black">
+                <p class="text-[10px] text-gray-400">Diésel</p>
+                <p class="text-sm"><span id="stk_diesel">0</span> <small>Gls</small></p>
             </div>
         </div>
 
-        <section id="sec-ventas" class="tab-content">
-            <div class="bg-white p-5 rounded-2xl shadow-lg mb-6 border border-gray-200">
-                <div class="grid grid-cols-2 gap-2 mb-3">
-                    <input type="date" id="v-fecha" class="p-2 bg-gray-50 border rounded-lg text-sm">
-                    <input type="text" id="v-orden" placeholder="No. Orden" class="p-2 bg-gray-50 border rounded-lg text-sm font-bold">
+        <section id="sec-ventas">
+            <div class="bg-white p-6 rounded-2xl shadow-xl border-t-4 border-blue-600 mb-6">
+                <div class="grid grid-cols-2 gap-3 mb-4">
+                    <input type="date" id="v_fecha" class="p-3 border rounded-xl bg-gray-50">
+                    <input type="text" id="v_orden" placeholder="No. Orden" class="p-3 border rounded-xl font-bold text-blue-600">
                 </div>
-                
-                <div class="space-y-3">
-                    <select id="v-cliente" onchange="cargarVehiculos()" class="w-full p-3 border rounded-xl bg-white shadow-sm font-semibold"></select>
-                    <select id="v-placa" onchange="cargarArea()" class="w-full p-3 border rounded-xl bg-blue-50 font-bold"></select>
-                    <input type="text" id="v-area" placeholder="Área" readonly class="w-full p-2 bg-gray-100 border rounded-lg text-xs italic">
-                    
+                <div class="grid grid-cols-1 gap-4">
                     <div class="grid grid-cols-2 gap-2">
-                        <select id="v-producto" onchange="autoPrecio()" class="p-3 border rounded-xl font-bold bg-yellow-50">
-                            <option value="">Producto</option>
-                            <option value="Súper">Súper</option>
-                            <option value="Regular">Regular</option>
-                            <option value="Diésel">Diésel</option>
+                        <select id="v_cliente" onchange="filtrarPlacas()" class="p-3 border rounded-xl" required>
+                            <option value="">-- Cliente --</option>
                         </select>
-                        <input type="number" id="v-cant" oninput="calcVenta()" placeholder="Gls" class="p-3 border rounded-xl text-center font-black text-lg">
+                        <select id="v_placa" onchange="actualizarArea()" class="p-3 border rounded-xl bg-blue-50 font-bold">
+                            <option value="">-- Placa --</option>
+                        </select>
                     </div>
-
-                    <div class="grid grid-cols-2 gap-2">
-                        <input type="number" id="v-precio" oninput="calcVenta()" placeholder="Precio $" class="p-2 border rounded-lg text-sm">
-                        <input type="number" id="v-desc" oninput="calcVenta()" placeholder="Desc. $" class="p-2 border rounded-lg text-sm text-red-500">
+                    <input type="text" id="v_area" placeholder="Área" class="p-3 border rounded-xl bg-gray-50 italic">
+                    <select id="v_prod" onchange="asignarPrecioAuto()" class="p-3 border rounded-xl font-bold border-blue-200">
+                        <option value="">-- Combustible --</option>
+                        <option value="Súper">Súper</option>
+                        <option value="Regular">Regular</option>
+                        <option value="Diésel">Diésel</option>
+                        <option value="ANULADA">ANULADA</option>
+                    </select>
+                    <div class="grid grid-cols-3 gap-2">
+                        <input type="number" id="v_cant" oninput="calcVenta()" placeholder="Gls" class="p-3 border rounded-xl font-bold">
+                        <input type="number" id="v_precio" oninput="calcVenta()" placeholder="$" class="p-3 border rounded-xl bg-gray-100 font-bold">
+                        <input type="number" id="v_desc" oninput="calcVenta()" value="0" class="p-3 border rounded-xl bg-red-50 text-red-600 font-bold">
                     </div>
                 </div>
-
-                <div class="mt-5 p-4 bg-slate-800 rounded-xl flex justify-between items-center text-white">
-                    <div>
-                        <p class="text-[10px] uppercase text-gray-400">Total a Cobrar</p>
-                        <p class="text-2xl font-black text-green-400">$ <span id="v-total">0.00</span></p>
+                <div class="mt-4 bg-slate-900 text-white p-4 rounded-xl flex justify-between items-center">
+                    <span class="text-2xl font-black text-green-400">$ <span id="v_total">0.00</span></span>
+                    <input type="hidden" id="v_edit_index" value="-1">
+                    <div class="flex space-x-2">
+                        <button onclick="cancelarVenta()" class="bg-slate-600 px-3 py-2 rounded-lg font-bold text-[10px]">LIMPIAR</button>
+                        <button id="btn-registrar" onclick="realizarVenta()" class="bg-blue-600 px-6 py-2 rounded-lg font-bold uppercase text-xs">Guardar</button>
                     </div>
-                    <button onclick="guardarVenta()" class="bg-blue-600 hover:bg-blue-700 px-8 py-3 rounded-xl font-bold uppercase text-sm shadow-lg active:scale-95 transition-all">Guardar</button>
                 </div>
             </div>
-
-            <div class="bg-white rounded-xl shadow-md overflow-hidden">
-                <div class="bg-gray-100 p-3 text-[10px] font-bold flex justify-between">
-                    <span>HISTORIAL LOCAL</span>
-                    <span id="contador-ventas">0 registros</span>
+            <div class="bg-white rounded-xl shadow overflow-hidden">
+                <div class="p-3 bg-gray-800 text-white flex justify-between items-center">
+                    <span class="text-[10px] font-bold uppercase">Registro Local</span>
+                    <button onclick="exportarVentasExcel()" class="bg-green-600 px-2 py-1 rounded text-[10px]">EXCEL</button>
                 </div>
                 <div class="overflow-x-auto">
-                    <table class="w-full text-left text-[11px]">
-                        <thead>
-                            <tr class="bg-gray-50 border-b">
-                                <th class="p-3">ORD/PLACA</th>
-                                <th class="p-3">DETALLE</th>
-                                <th class="p-3 text-right">TOTAL</th>
-                            </tr>
+                    <table class="w-full text-[11px] text-left border-collapse">
+                        <thead class="bg-gray-100 border-b">
+                            <tr><th class="p-2">Fecha/Ord</th><th class="p-2">Placa</th><th class="p-2">Detalle</th><th class="p-2 text-right">Total</th><th class="p-2 text-center">⚙️</th></tr>
                         </thead>
-                        <tbody id="lista-ventas" class="divide-y"></tbody>
+                        <tbody id="lista_ventas" class="divide-y italic"></tbody>
                     </table>
                 </div>
             </div>
         </section>
 
-        <section id="sec-compras" class="tab-content hidden">
-            <div class="bg-emerald-50 p-5 rounded-2xl border-2 border-emerald-200 shadow-lg">
-                <h3 class="font-bold mb-4 text-emerald-800 uppercase text-xs tracking-widest">Entrada de Inventario</h3>
-                <div class="space-y-3">
-                    <input type="date" id="c-fecha" class="w-full p-3 border rounded-xl">
-                    <select id="c-producto" class="w-full p-3 border rounded-xl font-bold uppercase">
-                        <option value="Súper">Súper</option>
-                        <option value="Regular">Regular</option>
-                        <option value="Diésel">Diésel</option>
-                    </select>
-                    <div class="grid grid-cols-2 gap-2">
-                        <input type="number" id="c-cant" placeholder="Gls Comprados" class="p-3 border rounded-xl">
-                        <input type="number" id="c-costo" placeholder="Costo Total $" class="p-3 border rounded-xl">
-                    </div>
-                    <input type="number" id="c-venta" placeholder="Nuevo Precio Venta $" class="w-full p-3 border rounded-xl bg-blue-50 font-bold">
-                    <button onclick="guardarCompra()" class="w-full bg-emerald-600 text-white p-4 rounded-xl font-black uppercase">Registrar Compra</button>
+        <section id="sec-compras" class="hidden">
+            <div class="bg-white p-6 rounded-2xl shadow-lg border-t-4 border-emerald-600 mb-6">
+                <div class="grid grid-cols-2 gap-3 mb-4">
+                    <input type="date" id="c_fecha" class="p-3 border rounded-xl">
+                    <input type="text" id="c_factura" placeholder="No. Factura" class="p-3 border rounded-xl font-bold">
+                </div>
+                <select id="c_prod" class="w-full p-3 border rounded-xl font-bold bg-gray-50 mb-4">
+                    <option value="Súper">Súper</option>
+                    <option value="Regular">Regular</option>
+                    <option value="Diésel">Diésel</option>
+                </select>
+                <div class="grid grid-cols-2 gap-2 mb-4">
+                    <input type="number" id="c_cant" oninput="calcCostoCompra()" placeholder="Gls" class="p-3 border rounded-xl">
+                    <input type="number" id="c_costo_total" oninput="calcCostoCompra()" placeholder="Total $" class="p-3 border rounded-xl">
+                </div>
+                <div class="grid grid-cols-2 gap-2 mb-4">
+                    <div class="p-2 bg-gray-100 rounded text-center text-[10px]">Costo: <span id="c_unitario_show" class="font-bold text-orange-600">$0.00</span></div>
+                    <input type="number" id="c_precio_venta" placeholder="Precio Venta" class="p-3 border rounded-xl bg-blue-50 font-bold">
+                </div>
+                <div class="flex space-x-2">
+                    <input type="hidden" id="c_edit_index" value="-1">
+                    <button onclick="cancelarCompra()" class="bg-slate-500 text-white px-4 py-3 rounded-xl font-bold text-xs">LIMPIAR</button>
+                    <button id="btn-comprar" onclick="registrarCompra()" class="flex-1 bg-emerald-600 text-white p-4 rounded-xl font-bold uppercase">Guardar Compra</button>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl shadow overflow-hidden">
+                <div class="p-3 bg-emerald-900 text-white flex justify-between items-center">
+                    <span class="text-[10px] font-bold">ABASTECIMIENTOS</span>
+                    <button onclick="exportarComprasExcel()" class="bg-white text-emerald-800 px-2 py-1 rounded text-[10px]">EXCEL</button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-[10px] text-left border-collapse">
+                        <thead class="bg-gray-100 border-b">
+                            <tr><th class="p-2">Fecha</th><th class="p-2">Factura</th><th class="p-2">Producto</th><th class="p-2">Gls</th><th class="p-2">Total</th><th class="p-2 text-center">⚙️</th></tr>
+                        </thead>
+                        <tbody id="lista_compras" class="divide-y italic"></tbody>
+                    </table>
                 </div>
             </div>
         </section>
 
-        <section id="sec-reportes" class="tab-content hidden">
-            <div id="reporte-vacio" class="text-center p-10 text-gray-400 italic text-sm">Cargando datos...</div>
-            <div class="grid gap-4" id="reporte-container"></div>
+        <section id="sec-contabilidad" class="hidden">
+            <div class="bg-purple-900 text-white p-4 rounded-2xl mb-4 flex gap-2">
+                <input type="date" id="cont_desde" class="p-2 rounded bg-purple-800 text-xs text-white">
+                <input type="date" id="cont_hasta" class="p-2 rounded bg-purple-800 text-xs text-white">
+                <button onclick="calcularContabilidad()" class="bg-yellow-500 text-black px-4 rounded font-bold text-xs uppercase">Filtrar</button>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow mb-4"><canvas id="chartVentas" style="max-height: 200px;"></canvas></div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-white p-4 rounded-xl shadow border-t-4 border-blue-500">
+                    <div class="flex justify-between items-center mb-2"><h3 class="font-bold text-xs">POR PLACA</h3><button onclick="exportarBIExcel('placa')" class="text-[9px] bg-blue-600 text-white px-2 py-1 rounded">EXCEL</button></div>
+                    <div class="max-h-40 overflow-y-auto"><table class="w-full text-[10px]"><tbody id="res_por_placa"></tbody></table></div>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow border-t-4 border-green-500">
+                    <div class="flex justify-between items-center mb-2"><h3 class="font-bold text-xs">POR ÁREA</h3><button onclick="exportarBIExcel('area')" class="text-[9px] bg-blue-600 text-white px-2 py-1 rounded">EXCEL</button></div>
+                    <div class="max-h-40 overflow-y-auto"><table class="w-full text-[10px]"><tbody id="res_por_area"></tbody></table></div>
+                </div>
+            </div>
         </section>
 
-        <section id="sec-admin" class="tab-content hidden">
-            <div class="bg-white p-6 rounded-2xl shadow border border-red-100">
-                <h2 class="text-red-600 font-bold mb-4">Zona de Peligro</h2>
-                <button onclick="limpiarCache()" class="w-full bg-red-50 text-red-600 p-4 rounded-xl text-xs font-bold border border-red-200 uppercase">Borrar Datos Locales y Recargar</button>
+        <section id="sec-admin" class="hidden">
+            <div class="bg-white p-6 rounded-xl shadow">
+                <div class="flex gap-2 mb-6"><button onclick="descargarBackup()" class="flex-1 bg-blue-600 text-white p-3 rounded font-bold text-xs">DESCARGAR BACKUP</button><input type="file" id="fIn" class="hidden" onchange="restaurarBackup(event)"><button onclick="document.getElementById('fIn').click()" class="flex-1 bg-slate-200 p-3 rounded font-bold text-xs">RESTAURAR</button></div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="border p-4 rounded"><h4 class="font-bold mb-2 uppercase text-xs">Nueva Empresa</h4><input type="text" id="adm_c_nom" class="w-full p-2 border mb-2 text-sm" placeholder="Nombre Empresa"><button onclick="addCliente()" class="w-full bg-black text-white p-2 rounded text-xs">AÑADIR</button></div>
+                    <div class="border p-4 rounded"><h4 class="font-bold mb-2 uppercase text-xs">Vincular Placa</h4><select id="adm_v_cli" class="w-full p-2 border mb-2 text-sm"></select><input type="text" id="adm_v_pla" class="w-full p-2 border mb-2 text-sm uppercase" placeholder="Placa"><input type="text" id="adm_v_area" class="w-full p-2 border mb-2 text-sm" placeholder="Área"><button onclick="addVehiculo()" class="w-full bg-yellow-600 text-white p-2 rounded text-xs">VINCULAR</button></div>
+                </div>
+                <button onclick="borrarTodo()" class="w-full mt-20 text-red-500 underline text-[10px] font-black uppercase">Borrar toda la base de datos local</button>
             </div>
         </section>
     </main>
 
     <script>
-        // CONFIGURACIÓN CLOUD
-        //const URL_APP = "TU_URL_DE_GOOGLE_APPS_SCRIPT_AQUI"; // REEMPLAZAR
         const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwCIJloPr3aulNtUsdQpd7Rlk0BzpIMc59zRRGV_GgV3YhLvybeseMxSJPGudxxID03iA/exec";
-        // ESTADO DE LA APP
-        let DB = {
-            clientes: [],
-            vehiculos: [],
-            ventas: [],
-            compras: [],
+        let app = JSON.parse(localStorage.getItem('fuelDB')) || {
+            clientes: [], vehiculos: [], ventas: [], compras: [],
+            stock: { "Súper": 0, "Regular": 0, "Diésel": 0 },
             precios: { "Súper": 0, "Regular": 0, "Diésel": 0 }
         };
+        let myChart = null;
 
-        // AL CARGAR
-        window.onload = async () => {
-            document.getElementById('v-fecha').valueAsDate = new Date();
-            cargarCache();
-            await sincronizar();
-        };
+        // --- FUNCIÓN DE GUARDADO ULTRA-RESISTENTE PARA MÓVIL ---
+        async function save(datosNube = null) {
+            // 1. Guardar localmente primero (siempre funciona)
+            localStorage.setItem('fuelDB', JSON.stringify(app));
 
-        // --- TRADUCTOR DE DATOS (IMPORTANTE PARA EL MOVIL) ---
-        function getVal(obj, key) {
-            if (!obj) return "";
-            return obj[key.toLowerCase()] || obj[key.toUpperCase()] || obj[key] || "";
-        }
+            // Actualizar la vista de inmediato
+            actualizarUI();
+            renderVentas();
+            renderCompras();
 
-        function forceNum(val) {
-            let n = parseFloat(val);
-            return isNaN(n) ? 0 : n;
-        }
+            // 2. Si hay datos para la nube, usar un método que el móvil no bloquee
+            if (datosNube) {
+                try {
+                    // Limpiamos los datos para que no lleven símbolos raros
+                    const params = new URLSearchParams();
+                    for (let key in datosNube) {
+                        params.append(key, datosNube[key] === undefined ? "" : datosNube[key]);
+                    }
 
-        // --- NAVEGACIÓN ---
-        function verTab(tabId) {
-            document.querySelectorAll('.tab-content').forEach(s => s.classList.add('hidden'));
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('border-yellow-400'));
-            
-            document.getElementById('sec-' + tabId).classList.remove('hidden');
-            document.getElementById('tab-' + tabId).classList.add('border-yellow-400');
-            
-            if(tabId === 'reportes') generarReporte();
-        }
-
-        // --- LÓGICA DE DATOS ---
-        async function sincronizar() {
-            document.getElementById('status-cloud').classList.replace('bg-green-500', 'bg-red-500');
-            try {
-                const response = await fetch(`${URL_APP}?action=readDB`);
-                const data = await response.json();
-                
-                if (data) {
-                    DB.clientes = data.clientes || [];
-                    DB.vehiculos = data.vehiculos || [];
-                    DB.ventas = data.ventas || [];
-                    DB.compras = data.compras || [];
-                    
-                    // Actualizar precios desde compras
-                    ["Súper", "Regular", "Diésel"].forEach(p => {
-                        const ult = DB.compras.reverse().find(c => getVal(c, 'producto') === p);
-                        if(ult) DB.precios[p] = forceNum(getVal(ult, 'precioVenta'));
+                    // Usamos 'fetch' con modo 'no-cors' para que el móvil no lo bloquee por seguridad
+                    fetch(WEB_APP_URL + "?" + params.toString(), {
+                        method: 'GET',
+                        mode: 'no-cors',
+                        cache: 'no-cache'
+                    }).then(() => {
+                        console.log("✅ Enviado a la nube exitosamente");
+                    }).catch(err => {
+                        console.error("❌ Error de envío, pero guardado en móvil local");
                     });
 
-                    document.getElementById('status-cloud').classList.replace('bg-red-500', 'bg-green-500');
-                    guardarCache();
-                    actualizarUI();
+                } catch (e) {
+                    console.error("Error crítico en envío:", e);
                 }
-            } catch (e) {
-                console.log("Offline mode");
             }
         }
 
-        function actualizarUI() {
-            // Rellenar Clientes
-            let h = '<option value="">Seleccionar Cliente</option>';
-            DB.clientes.forEach(c => h += `<option value="${getVal(c, 'id')}">${getVal(c, 'nombre')}</option>`);
-            document.getElementById('v-cliente').innerHTML = h;
+        // --- VINCULACIÓN SIMPLIFICADA (PARA QUE APAREZCA LA PLACA SÍ O SÍ) ---
+        function filtrarPlacas() {
+            const selectorCliente = document.getElementById('v_cliente');
+            const clienteID = selectorCliente.value;
 
-            // Calcular Inventario
-            const inv = { "Súper": 0, "Regular": 0, "Diésel": 0 };
-            DB.compras.forEach(c => inv[getVal(c, 'producto')] += forceNum(getVal(c, 'cantidad')));
-            DB.ventas.forEach(v => inv[getVal(v, 'producto')] -= forceNum(getVal(v, 'cantidad')));
-            
-            document.getElementById('inv-super').innerText = inv["Súper"].toFixed(1);
-            document.getElementById('inv-regular').innerText = inv["Regular"].toFixed(1);
-            document.getElementById('inv-diesel').innerText = inv["Diésel"].toFixed(1);
+            // Si no hay cliente, limpiar placas y salir
+            if (!clienteID) {
+                document.getElementById('v_placa').innerHTML = '<option value="">-- Placa --</option>';
+                return;
+            }
 
-            // Render Ventas
-            const tbody = document.getElementById('lista-ventas');
-            tbody.innerHTML = DB.ventas.slice(0, 20).map(v => `
-                <tr class="border-b">
-                    <td class="p-3 font-bold">#${getVal(v, 'orden')}<br><span class="text-blue-600">${getVal(v, 'placa')}</span></td>
-                    <td class="p-3">${getVal(v, 'producto')}<br><span class="text-gray-400">${getVal(v, 'cantidad')} Gls</span></td>
-                    <td class="p-3 text-right font-black text-blue-800">$${forceNum(getVal(v, 'total')).toFixed(2)}</td>
-                </tr>
-            `).join('');
-            document.getElementById('contador-ventas').innerText = `${DB.ventas.length} registros`;
+            // Buscamos los vehículos (usando == para que compare número con texto sin problemas)
+            const filtrados = app.vehiculos.filter(v => {
+                let v_cid = v.cid || v.CID || "";
+                return String(v_cid).trim() == String(clienteID).trim();
+            });
+
+            let html = '<option value="">-- Placa (' + filtrados.length + ') --</option>';
+            filtrados.forEach(v => {
+                let p = (v.placa || v.PLACA || "S/P").toUpperCase();
+                html += `<option value="${p}">${p}</option>`;
+            });
+
+            document.getElementById('v_placa').innerHTML = html;
         }
 
-        // --- FORMULARIO VENTAS ---
-        function cargarVehiculos() {
-            const cid = document.getElementById('v-cliente').value;
-            const filtrados = DB.vehiculos.filter(v => String(getVal(v, 'cid')) === String(cid));
-            let h = '<option value="">Placa</option>';
-            filtrados.forEach(v => h += `<option value="${getVal(v, 'placa')}">${getVal(v, 'placa')}</option>`);
-            document.getElementById('v-placa').innerHTML = h;
+        // --- ACTUALIZAR ÁREA (CORREGIDO PARA MÓVIL) ---
+        function actualizarArea() {
+            const placaSeleccionada = document.getElementById('v_placa').value;
+            if (!placaSeleccionada) return;
+
+            const veh = app.vehiculos.find(v => {
+                let p = v.placa || v.PLACA || "";
+                return String(p).trim().toUpperCase() === String(placaSeleccionada).trim().toUpperCase();
+            });
+
+            if (veh) {
+                document.getElementById('v_area').value = veh.area || veh.AREA || "";
+            }
         }
 
-        function cargarArea() {
-            const placa = document.getElementById('v-placa').value;
-            const veh = DB.vehiculos.find(v => getVal(v, 'placa') === placa);
-            document.getElementById('v-area').value = veh ? getVal(veh, 'area') : "";
+        function verTab(t) {
+            document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
+            document.getElementById('sec-' + t).classList.remove('hidden');
+            if (t === 'contabilidad') calcularContabilidad();
         }
 
-        function autoPrecio() {
-            const p = document.getElementById('v-producto').value;
-            document.getElementById('v-precio').value = DB.precios[p] || 0;
+        // --- COMPRAS ---
+        function calcCostoCompra() {
+            const c = parseFloat(document.getElementById('c_cant').value) || 0;
+            const t = parseFloat(document.getElementById('c_costo_total').value) || 0;
+            document.getElementById('c_unitario_show').innerText = "$" + (c > 0 ? (t / c).toFixed(2) : "0.00");
+        }
+
+        function registrarCompra() {
+            const f = document.getElementById('c_fecha').value;
+            const prod = document.getElementById('c_prod').value;
+            const cant = parseFloat(document.getElementById('c_cant').value) || 0;
+            const totalC = parseFloat(document.getElementById('c_costo_total').value) || 0;
+            const idx = parseInt(document.getElementById('c_edit_index').value);
+
+            if (!f || cant <= 0) return alert("Faltan datos obligatorios en la compra");
+
+            const obj = {
+                tipo: "COMPRAS", // Asegúrate que en tu Excel la pestaña se llame COMPRAS
+                fecha: f,
+                factura: document.getElementById('c_factura').value,
+                producto: prod,
+                cantidad: cant,
+                costoTotal: totalC,
+                unitario: totalC / cant,
+                precioVenta: parseFloat(document.getElementById('c_precio_venta').value) || 0
+            };
+
+            if (idx > -1) {
+                app.compras[idx] = obj;
+            } else {
+                app.compras.unshift(obj);
+            }
+
+            // Actualizar el precio de venta actual para este producto
+            app.precios[prod] = obj.precioVenta;
+
+            // Guardar localmente y enviar a la nube
+            save(obj);
+            cancelarCompra();
+            renderCompras(); // Forzar dibujo de la lista
+        }
+
+        function renderCompras() {
+            const lista = document.getElementById('lista_compras');
+            if (!lista) return;
+
+            if (!app.compras || app.compras.length === 0) {
+                lista.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-gray-400 italic">No hay compras registradas</td></tr>';
+                return;
+            }
+
+            lista.innerHTML = app.compras.map((c, i) => {
+                // Soporte multinombre para cada columna (PC y Nube)
+                const fecha = c.fecha || c.FECHA || '---';
+                const factura = c.factura || c.FACTURA || 'S/N';
+                const producto = c.producto || c.PRODUCTO || '---';
+                const cantidad = c.cantidad || c.CANTIDAD || 0;
+
+                // Buscamos el total en todas sus posibles variantes de nombre
+                let rawTotal = c.costoTotal || c.COSTOTOTAL || c.total || c.TOTAL || 0;
+
+                // Limpiamos el valor por si viene con símbolos de moneda o comas
+                if (typeof rawTotal === "string") {
+                    rawTotal = rawTotal.replace(/[^0-9.]/g, '');
+                }
+                const totalNum = parseFloat(rawTotal) || 0;
+
+                return `
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="p-2">${fecha}</td>
+                        <td class="p-2 text-[9px] font-mono">${factura}</td>
+                        <td class="p-2 font-bold text-emerald-700">${producto}</td>
+                        <td class="p-2 font-semibold">${cantidad} <small>Gls</small></td>
+                        <td class="p-2 text-right font-black text-slate-900">$${totalNum.toFixed(2)}</td>
+                        <td class="p-2 text-center">
+                            <div class="flex justify-center gap-2">
+                                <button onclick="editarCompra(${i})" class="text-blue-500 bg-blue-50 p-1 rounded">✎</button>
+                                <button onclick="eliminarCompra(${i})" class="text-red-500 bg-red-50 p-1 rounded">🗑</button>
+                            </div>
+                        </td>
+                    </tr>`;
+            }).join('');
+        }
+
+        function editarCompra(i) {
+            const c = app.compras[i];
+            document.getElementById('c_fecha').value = c.fecha;
+            document.getElementById('c_factura').value = c.factura;
+            document.getElementById('c_prod').value = c.producto;
+            document.getElementById('c_cant').value = c.cantidad;
+            document.getElementById('c_costo_total').value = c.costoTotal;
+            document.getElementById('c_precio_venta').value = c.precioVenta;
+            document.getElementById('c_edit_index').value = i;
+            document.getElementById('btn-comprar').innerText = "Actualizar";
+            verTab('compras');
+        }
+
+        function eliminarCompra(i) { if (confirm("¿Eliminar abastecimiento?")) { app.compras.splice(i, 1); save(); } }
+
+        function cancelarCompra() {
+            document.getElementById('c_edit_index').value = "-1";
+            document.getElementById('btn-comprar').innerText = "Guardar Compra";
+            ["c_cant", "c_costo_total", "c_factura", "c_precio_venta"].forEach(id => document.getElementById(id).value = "");
+        }
+
+
+
+        // --- VENTAS ---
+        function asignarPrecioAuto() {
+            const p = document.getElementById('v_prod').value;
+            document.getElementById('v_precio').value = (p === "ANULADA") ? 0 : (app.precios[p] || 0);
             calcVenta();
         }
 
         function calcVenta() {
-            const c = forceNum(document.getElementById('v-cant').value);
-            const p = forceNum(document.getElementById('v-precio').value);
-            const d = forceNum(document.getElementById('v-desc').value);
-            document.getElementById('v-total').innerText = ((c * p) - d).toFixed(2);
+            const c = parseFloat(document.getElementById('v_cant').value) || 0;
+            const p = parseFloat(document.getElementById('v_precio').value) || 0;
+            const d = parseFloat(document.getElementById('v_desc').value) || 0;
+            document.getElementById('v_total').innerText = ((c * p) - d).toFixed(2);
         }
 
-        async function guardarVenta() {
-            const venta = {
-                tipo: "VENTAS",
-                fecha: document.getElementById('v-fecha').value,
-                orden: document.getElementById('v-orden').value,
-                placa: document.getElementById('v-placa').value,
-                producto: document.getElementById('v-producto').value,
-                cantidad: forceNum(document.getElementById('v-cant').value),
-                precio: forceNum(document.getElementById('v-precio').value),
-                descuento: forceNum(document.getElementById('v-desc').value),
-                total: forceNum(document.getElementById('v-total').innerText),
-                cliente: document.getElementById('v-cliente').selectedOptions[0].text
+        function realizarVenta() {
+            const prod = document.getElementById('v_prod').value;
+            const cant = parseFloat(document.getElementById('v_cant').value) || 0;
+            const cid = document.getElementById('v_cliente').value;
+            const placa = document.getElementById('v_placa').value;
+            const idx = parseInt(document.getElementById('v_edit_index').value);
+
+            if (!prod || !placa || !cid || cant <= 0) {
+                alert("Por favor rellene: Cliente, Placa, Producto y Cantidad");
+                return;
+            }
+
+            const clientObj = app.clientes.find(c => String(c.id || c.ID) === String(cid));
+
+            const ven = {
+                tipo: "VENTAS", // Debe coincidir con el nombre de tu hoja en Excel
+                fecha: document.getElementById('v_fecha').value,
+                orden: document.getElementById('v_orden').value,
+                cliente: clientObj ? (clientObj.nombre || clientObj.NOMBRE) : "Desconocido",
+                placa: placa,
+                area: document.getElementById('v_area').value,
+                producto: (prod === "ANULADA") ? "--- ANULADA ---" : prod,
+                cantidad: cant,
+                precio: parseFloat(document.getElementById('v_precio').value) || 0,
+                descuento: parseFloat(document.getElementById('v_desc').value) || 0,
+                total: parseFloat(document.getElementById('v_total').innerText) || 0,
+                clienteId: cid
             };
 
-            if (!venta.placa || venta.cantidad <= 0) return alert("Completa los datos");
+            if (idx > -1) {
+                app.ventas[idx] = ven;
+            } else {
+                app.ventas.unshift(ven);
+                // Incrementar número de orden automáticamente si es numérico
+                let ord = document.getElementById('v_orden').value;
+                if (!isNaN(ord) && ord !== "") document.getElementById('v_orden').value = parseInt(ord) + 1;
+            }
 
-            // Guardar local
-            DB.ventas.unshift(venta);
-            guardarCache();
-            actualizarUI();
-
-            // Enviar Nube
-            const params = new URLSearchParams(venta);
-            fetch(`${URL_APP}?${params.toString()}`, { mode: 'no-cors' });
-            
-            // Limpiar
-            document.getElementById('v-cant').value = "";
-            document.getElementById('v-orden').value = "";
-            alert("✅ Venta Guardada");
+            save(ven); // Esta es la función que ya arreglamos y que envía a la nube
+            cancelarVenta();
+            renderVentas();
+            actualizarUI(); // Para que el stock baje inmediatamente en los cuadros de arriba
         }
 
-        // --- CACHE ---
-        function guardarCache() { localStorage.setItem('fuel_db_v8', JSON.stringify(DB)); }
-        function cargarCache() {
-            const data = localStorage.getItem('fuel_db_v8');
-            if (data) { DB = JSON.parse(data); actualizarUI(); }
+        function editarVenta(i) {
+            const v = app.ventas[i];
+            document.getElementById('v_fecha').value = v.fecha;
+            document.getElementById('v_orden').value = v.orden;
+            document.getElementById('v_cliente').value = v.clienteId;
+            filtrarPlacas();
+            document.getElementById('v_placa').value = v.placa;
+            document.getElementById('v_area').value = v.area;
+            document.getElementById('v_prod').value = (v.producto === "--- ANULADA ---") ? "ANULADA" : v.producto;
+            document.getElementById('v_cant').value = v.cantidad;
+            document.getElementById('v_precio').value = v.precio;
+            document.getElementById('v_desc').value = v.descuento;
+            document.getElementById('v_total').innerText = v.total;
+            document.getElementById('v_edit_index').value = i;
+            document.getElementById('btn-registrar').innerText = "Actualizar";
+            verTab('ventas');
         }
-        function limpiarCache() { if(confirm("¿Borrar todo?")) { localStorage.clear(); location.reload(); } }
+
+        function eliminarVenta(i) { if (confirm("¿Eliminar registro?")) { app.ventas.splice(i, 1); save(); } }
+
+        function cancelarVenta() {
+            document.getElementById('v_edit_index').value = "-1";
+            document.getElementById('btn-registrar').innerText = "Guardar";
+            document.getElementById('v_cant').value = "";
+            document.getElementById('v_total').innerText = "0.00";
+        }
+
+        function renderVentas() {
+            const lista = document.getElementById('lista_ventas');
+            if (!lista) return;
+
+            lista.innerHTML = app.ventas.map((v, i) => {
+                const fecha = v.fecha || v.FECHA || '';
+                const orden = v.orden || v.ORDEN || '';
+                const placa = v.placa || v.PLACA || '';
+                const prod = v.producto || v.PRODUCTO || '';
+                const cant = v.cantidad || v.CANTIDAD || 0;
+
+                // CORRECCIÓN AQUÍ: Forzar que el total sea número
+                let totalVal = v.total || v.TOTAL || 0;
+                if (typeof totalVal === "string") totalVal = totalVal.replace(/[^0-9.]/g, '');
+                const totalNum = parseFloat(totalVal) || 0;
+
+                return `
+                    <tr class="border-b">
+                        <td class="p-2">${fecha}<br><span class="text-blue-600 font-bold">${orden}</span></td>
+                        <td class="p-2 font-bold">${placa}</td>
+                        <td class="p-2">${prod}<br>${cant} Gls</td>
+                        <td class="p-2 text-right font-bold">$${totalNum.toFixed(2)}</td>
+                        <td class="p-2 text-center">
+                            <button onclick="editarVenta(${i})" class="text-blue-500 mr-1">✎</button>
+                            <button onclick="eliminarVenta(${i})" class="text-red-500">🗑</button>
+                        </td>
+                    </tr>`;
+            }).join('');
+        }
 
         // --- REPORTES ---
-        function generarReporte() {
-            const res = {};
-            DB.ventas.forEach(v => {
-                const area = getVal(v, 'area') || "Sin Área";
-                if(!res[area]) res[area] = 0;
-                res[area] += forceNum(getVal(v, 'total'));
+        function exportarVentasExcel() { const ws = XLSX.utils.json_to_sheet(app.ventas); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Ventas"); XLSX.writeFile(wb, "Historial_Ventas.xlsx"); }
+        function exportarComprasExcel() { const ws = XLSX.utils.json_to_sheet(app.compras); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Compras"); XLSX.writeFile(wb, "Historial_Compras.xlsx"); }
+        function exportarBIExcel(t) { const data = []; document.querySelectorAll(`#res_por_${t} tr`).forEach(tr => { const td = tr.querySelectorAll("td"); data.push({ [t.toUpperCase()]: td[0].innerText, GLS: td[1].innerText, TOTAL: td[2].innerText }); }); const ws = XLSX.utils.json_to_sheet(data); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, t); XLSX.writeFile(wb, `Reporte_${t}.xlsx`); }
+
+        function calcularContabilidad() {
+            const d = document.getElementById('cont_desde').value;
+            const h = document.getElementById('cont_hasta').value;
+            let f = app.ventas;
+
+            // 1. Filtrar por fecha (soporta minúsculas y MAYÚSCULAS de la nube)
+            if (d) f = f.filter(v => (v.fecha || v.FECHA) >= d);
+            if (h) f = f.filter(v => (v.fecha || v.FECHA) <= h);
+
+            // 2. Agrupar por Placa
+            const agP = {};
+            f.forEach(v => {
+                const placa = (v.placa || v.PLACA || "S/P").toUpperCase();
+
+                // --- AQUÍ ESTÁ EL CAMBIO: Limpieza de números ---
+                const cant = limpiarNum(v.cantidad || v.CANTIDAD);
+                const total = limpiarNum(v.total || v.TOTAL);
+
+                if (!agP[placa]) agP[placa] = { g: 0, t: 0 };
+                agP[placa].g += cant;
+                agP[placa].t += total;
             });
 
-            document.getElementById('reporte-container').innerHTML = Object.entries(res).map(([a, t]) => `
-                <div class="bg-white p-4 rounded-xl flex justify-between items-center shadow-sm">
-                    <span class="font-bold text-xs uppercase">${a}</span>
-                    <span class="font-black text-blue-600">$${t.toFixed(2)}</span>
-                </div>
-            `).join('');
-            document.getElementById('reporte-vacio').classList.add('hidden');
+            document.getElementById('res_por_placa').innerHTML = Object.entries(agP).map(([p, d]) => `
+                <tr class="border-b">
+                    <td class="p-1">${p}</td>
+                    <td class="p-1 text-center font-bold">${d.g.toFixed(1)}</td>
+                    <td class="p-1 text-right font-bold text-blue-600">$${d.t.toFixed(2)}</td>
+                </tr>`).join('');
+
+            // 3. Agrupar por Área
+            const agA = {};
+            f.forEach(v => {
+                const area = (v.area || v.AREA || "SIN ÁREA").toUpperCase();
+
+                // --- AQUÍ TAMBIÉN: Limpieza de números ---
+                const cant = limpiarNum(v.cantidad || v.CANTIDAD);
+                const total = limpiarNum(v.total || v.TOTAL);
+
+                if (!agA[area]) agA[area] = { g: 0, t: 0 };
+                agA[area].g += cant;
+                agA[area].t += total;
+            });
+
+            document.getElementById('res_por_area').innerHTML = Object.entries(agA).map(([a, d]) => `
+                <tr class="border-b">
+                    <td class="p-1">${a}</td>
+                    <td class="p-1 text-center font-bold">${d.g.toFixed(1)}</td>
+                    <td class="p-1 text-right font-bold text-emerald-600">$${d.t.toFixed(2)}</td>
+                </tr>`).join('');
+
+            updateChart(f);
         }
+
+        document.getElementById('res_por_placa').innerHTML = Object.entries(agP).map(([p, d]) => `
+                <tr class="border-b">
+                    <td class="p-1">${p}</td>
+                    <td class="p-1 text-center font-bold">${d.g.toFixed(1)}</td>
+                    <td class="p-1 text-right font-bold text-blue-600">$${d.t.toFixed(2)}</td>
+                </tr>`).join('');
+
+        // Agrupar por Área
+        const agA = {};
+        f.forEach(v => {
+            const area = (v.area || v.AREA || "SIN ÁREA").toUpperCase();
+            const cant = parseFloat(v.cantidad || v.CANTIDAD || 0);
+            const total = parseFloat(v.total || v.TOTAL || 0);
+
+            if (!agA[area]) agA[area] = { g: 0, t: 0 };
+            agA[area].g += cant;
+            agA[area].t += total;
+        });
+
+        document.getElementById('res_por_area').innerHTML = Object.entries(agA).map(([a, d]) => `
+                <tr class="border-b">
+                    <td class="p-1">${a}</td>
+                    <td class="p-1 text-center font-bold">${d.g.toFixed(1)}</td>
+                    <td class="p-1 text-right font-bold text-emerald-600">$${d.t.toFixed(2)}</td>
+                </tr>`).join('');
+
+        updateChart(f);
+
+
+        function updateChart(data) {
+            const ctx = document.getElementById('chartVentas').getContext('2d');
+            const ag = {}; data.forEach(v => ag[v.fecha] = (ag[v.fecha] || 0) + parseFloat(v.total || 0));
+            const labels = Object.keys(ag).sort().slice(-7);
+            if (myChart) myChart.destroy();
+            myChart = new Chart(ctx, { type: 'bar', data: { labels, datasets: [{ label: 'Ventas $', data: labels.map(l => ag[l]), backgroundColor: '#4f46e5' }] } });
+        }
+
+        // --- ADMIN ---
+        function addCliente() {
+            const n = document.getElementById('adm_c_nom').value;
+            if (n) {
+                const nuevoCliente = { tipo: "CLIENTES", id: Date.now(), nombre: n };
+                app.clientes.push(nuevoCliente);
+                save(nuevoCliente);
+                actualizarSelects();
+                document.getElementById('adm_c_nom').value = "";
+            }
+        }
+
+        function addVehiculo() {
+            const p = document.getElementById('adm_v_pla').value.toUpperCase();
+            const c = document.getElementById('adm_v_cli').value;
+            const a = document.getElementById('adm_v_area').value;
+            if (p && c) {
+                const nuevoVehiculo = { tipo: "VEHICULOS", placa: p, cid: c, area: a };
+                app.vehiculos.push(nuevoVehiculo);
+                save(nuevoVehiculo);
+                actualizarSelects();
+                alert("✅ Vehículo vinculado");
+                document.getElementById('adm_v_pla').value = "";
+                document.getElementById('adm_v_area').value = "";
+            }
+        }
+
+        function actualizarSelects() {
+            let opciones = '<option value="">-- Cliente --</option>';
+            opciones += app.clientes.map(c => `<option value="${c.id || c.ID}">${c.nombre || c.NOMBRE}</option>`).join('');
+            document.getElementById('adm_v_cli').innerHTML = opciones;
+            document.getElementById('v_cliente').innerHTML = opciones;
+        }
+
+        // --- EL VÍNCULO CRÍTICO (CORREGIDO) ---
+        // --- EL VÍNCULO CRÍTICO (VERSIÓN ULTRA-COMPATIBLE) ---
+        function filtrarPlacas() {
+            const clienteIdRaw = document.getElementById('v_cliente').value;
+            // .trim() elimina espacios invisibles que el móvil a veces añade
+            const clienteId = String(clienteIdRaw).trim();
+
+            console.log("Filtrando para cliente ID:", clienteId); // Para depurar en consola
+
+            // Buscamos ignorando mayúsculas/minúsculas en las llaves (cid o CID)
+            const filtrados = app.vehiculos.filter(v => {
+                const v_cid = String(v.cid || v.CID || "").trim();
+                return v_cid === clienteId;
+            });
+
+            let html = '<option value="">-- Placa --</option>';
+            if (filtrados.length > 0) {
+                html += filtrados.map(v => {
+                    const p = (v.placa || v.PLACA || "").toUpperCase();
+                    return `<option value="${p}">${p}</option>`;
+                }).join('');
+            } else {
+                console.warn("No se encontraron placas para este cliente en el móvil");
+            }
+
+            document.getElementById('v_placa').innerHTML = html;
+            document.getElementById('v_area').value = "";
+        }
+
+        function actualizarArea() {
+            const placaRaw = document.getElementById('v_placa').value;
+            const placa = String(placaRaw).trim().toUpperCase();
+
+            // Buscamos la placa con tolerancia a fallos de escritura
+            const vehiculo = app.vehiculos.find(v => {
+                const v_placa = String(v.placa || v.PLACA || "").trim().toUpperCase();
+                return v_placa === placa;
+            });
+
+            if (vehiculo) {
+                document.getElementById('v_area').value = vehiculo.area || vehiculo.AREA || "";
+            }
+        }
+
+        function actualizarUI() {
+            const productos = ["Súper", "Regular", "Diésel"];
+            productos.forEach(prod => {
+                const prodLimpio = prod.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+                const c = app.compras.reduce((s, i) => {
+                    const p = (i.producto || i.PRODUCTO || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                    return p === prodLimpio ? s + limpiarNum(i.cantidad || i.CANTIDAD) : s;
+                }, 0);
+
+                const v = app.ventas.reduce((s, i) => {
+                    const p = (i.producto || i.PRODUCTO || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                    return p === prodLimpio ? s + limpiarNum(i.cantidad || i.CANTIDAD) : s;
+                }, 0);
+
+                const el = document.getElementById("stk_" + prodLimpio);
+                if (el) el.innerText = (c - v).toFixed(1);
+            });
+        }
+        function descargarBackup() { const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(app)); const dl = document.createElement('a'); dl.setAttribute("href", dataStr); dl.setAttribute("download", "BACKUP_FUEL.json"); dl.click(); }
+        function restaurarBackup(ev) { const reader = new FileReader(); reader.onload = e => { app = JSON.parse(e.target.result); save(); location.reload(); }; reader.readAsText(ev.target.files[0]); }
+        function borrarTodo() { if (confirm("¿BORRAR TODO?")) { localStorage.clear(); location.reload(); } }
+
+
+        // --- LIMPIADOR UNIVERSAL DE NÚMEROS ---
+        function limpiarNum(valor) {
+            if (valor === null || valor === undefined || valor === "") return 0;
+            if (typeof valor === "number") return valor;
+            // Quita todo lo que no sea número o punto decimal
+            let limpio = String(valor).replace(/[^0-9.]/g, '');
+            return parseFloat(limpio) || 0;
+        }
+
+        async function actualizarTodo() {
+            try {
+                const res = await fetch(WEB_APP_URL + "?action=readDB");
+                const data = await res.json();
+                if (data) {
+                    // Limpiamos los datos de VENTAS al entrar
+                    app.ventas = (data.ventas || []).map(v => ({
+                        ...v,
+                        cantidad: limpiarNum(v.cantidad || v.CANTIDAD),
+                        total: limpiarNum(v.total || v.TOTAL),
+                        precio: limpiarNum(v.precio || v.PRECIO)
+                    }));
+
+                    // Limpiamos los datos de COMPRAS al entrar
+                    app.compras = (data.compras || []).map(c => ({
+                        ...c,
+                        cantidad: limpiarNum(c.cantidad || c.CANTIDAD),
+                        costoTotal: limpiarNum(c.costoTotal || c.COSTOTOTAL || c.TOTAL)
+                    }));
+
+                    app.clientes = data.clientes || [];
+                    app.vehiculos = data.vehiculos || [];
+
+                    localStorage.setItem('fuelDB', JSON.stringify(app));
+                    refrescarPantalla();
+                }
+            } catch (e) {
+                console.error("Error cargando nube:", e);
+                refrescarPantalla();
+            }
+        }
+
+        function refrescarPantalla() {
+            actualizarUI();
+            renderVentas();
+            renderCompras();
+            actualizarSelects();
+            if (!document.getElementById('sec-contabilidad').classList.contains('hidden')) {
+                calcularContabilidad();
+
+            }
+
+            window.onload = function () {
+                document.getElementById('v_fecha').valueAsDate = new Date();
+                document.getElementById('c_fecha').valueAsDate = new Date();
+                actualizarTodo();
+            };
     </script>
 </body>
 </html>
